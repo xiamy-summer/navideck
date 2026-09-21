@@ -7,6 +7,7 @@ import { Icon } from './Icon';
 import { NavBoard } from './NavBoard';
 import { SearchBar } from './SearchBar';
 import { WebModal } from './WebModal';
+import { Widgets } from './Widgets';
 import { ConfirmDialog, emptyItemDraft, GroupDialog, ItemDialog, itemToDraft, type ItemDraft } from './Dialogs';
 import type { Group, Item, NetMode, Settings, ThemeMode, User } from '@/lib/types';
 
@@ -278,6 +279,14 @@ export function HomeView({
         <SearchBar settings={settings} items={allItems} onOpenItem={openItem} />
       </header>
 
+      {settings.widgetsEnabled && settings.widgetPosition === 'top' ? (
+        <Widgets
+          showSystem={settings.widgetSystem}
+          showDocker={settings.widgetDocker && settings.dockerEnabled}
+          refreshSec={settings.widgetRefresh}
+        />
+      ) : null}
+
       {editMode && user ? (
         <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-brand/50 bg-brand/5 px-3 py-2 text-[13px]">
           <Icon icon="mdi:information-outline" size={17} title="提示" />
@@ -348,6 +357,16 @@ export function HomeView({
           onAddItem={(groupId) => setPending({ kind: 'item', draft: emptyItemDraft(groupId) })}
         />
       )}
+
+      {settings.widgetsEnabled && settings.widgetPosition === 'bottom' ? (
+        <div className="mt-6">
+          <Widgets
+            showSystem={settings.widgetSystem}
+            showDocker={settings.widgetDocker && settings.dockerEnabled}
+            refreshSec={settings.widgetRefresh}
+          />
+        </div>
+      ) : null}
 
       {settings.footerEnabled && settings.footerText ? (
         <footer className="mt-10 border-t border-line pt-4 text-center text-[12px] text-muted">
