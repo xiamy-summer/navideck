@@ -26,6 +26,72 @@ const asQuery = (as?: number | null) => (as ? `?as=${as}` : '');
 
 export type GroupWithItems = Group & { items: Item[] };
 
+export interface SystemStatus {
+  version: string;
+  service: {
+    pid: number;
+    uptime: number;
+    nodeVersion: string;
+    rssMb: number;
+    heapUsedMb: number;
+  };
+  host: {
+    hostname: string;
+    platform: string;
+    arch: string;
+    cpuModel: string;
+    cpuCount: number;
+    loadAvg: number[];
+    totalMemGb: number;
+    freeMemGb: number;
+    osUptime: number;
+  };
+  data: {
+    dataDir: string;
+    dbSizeMb: number;
+    groups: number;
+    items: number;
+    files: number;
+    users: number;
+  };
+}
+
+export interface DockerContainer {
+  id: string;
+  name: string;
+  image: string;
+  state: string;
+  status: string;
+  created: number;
+  ports: Array<{ private: number; public?: number; type: string }>;
+}
+
+export interface DockerListResult {
+  available: boolean;
+  socket: string;
+  message?: string;
+  containers: DockerContainer[];
+  info?: { version?: string; containers: number; running: number; stopped: number } | null;
+}
+
+export interface MetricPoint {
+  t: number;
+  cpu: number;
+  mem: number;
+  disk: number;
+  netRx: number;
+  netTx: number;
+}
+
+export interface MetricsResult {
+  current: MetricPoint;
+  history: MetricPoint[];
+  disk: { path: string; totalGb: number; usedGb: number; freeGb: number; usedPercent: number };
+  memory: { totalGb: number; usedGb: number; freeGb: number; usedPercent: number };
+  cpu: { count: number; model: string; loadAvg: number[] };
+  osUptime: number;
+}
+
 export const api = {
   login: (username: string, password: string) =>
     request<User>('/api/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
@@ -97,6 +163,21 @@ export const api = {
 
   resetSettings: (as?: number | null) =>
     request<Settings>(`/api/settings/reset${asQuery(as)}`, { method: 'POST' }),
+
+  system: () => request<SystemStatus>('/api/system'),
+
+  metrics: () => request<MetricsResult>('/api/metrics'),
+
+  dockerContainers: () => request<DockerListResult>('/api/docker/containers'),
+
+  dockerAction: (id: string, action: 'start' | 'stop' | 'restart') =>
+    request<{ success: boolean }>(`/api/docker/containers/${id}/action`, {
+      method: 'POST',
+      body: JSON.stringify({ action }),
+    }),
+
+  dockerLogs: (id: string, tail = 200) =>
+    request<{ logs: string }>(`/api/docker/containers/${id}/logs?tail=${tail}`),
 
   users: () => request<User[]>('/api/users'),
 
