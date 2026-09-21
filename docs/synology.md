@@ -10,7 +10,17 @@
 原理：把代码推到 GitHub，GitHub Actions 自动构建 amd64 + arm64 镜像并推送到
 `ghcr.io/<你的用户名>/<仓库名>:latest`，群晖直接拉取，之后更新只需 `git push`。
 
-### 1. 推送代码到 GitHub
+### 0. 补上自动构建工作流（一次性，30 秒）
+
+仓库源码已就位，只差 `.github/workflows/docker-build.yml` 这个文件。
+点下面的链接，GitHub 会打开"新建文件"页面，**路径和内容都已填好**，直接点右下角
+**Commit changes** 即可触发构建：
+
+[一键创建 workflow 文件](https://github.com/xiamy-summer/navideck/new/main?filename=.github/workflows/docker-build.yml&value=name%3A%20Build%20multi-arch%20image%0A%0Aon%3A%0A%20%20push%3A%0A%20%20%20%20branches%3A%20%5Bmain%5D%0A%20%20%20%20tags%3A%20%5B%22v%2A%22%5D%0A%20%20workflow_dispatch%3A%0A%0Ajobs%3A%0A%20%20build%3A%0A%20%20%20%20runs-on%3A%20ubuntu-latest%0A%20%20%20%20permissions%3A%0A%20%20%20%20%20%20contents%3A%20read%0A%20%20%20%20%20%20packages%3A%20write%0A%20%20%20%20steps%3A%0A%20%20%20%20%20%20-%20name%3A%20Checkout%0A%20%20%20%20%20%20%20%20uses%3A%20actions/checkout%40v4%0A%0A%20%20%20%20%20%20-%20name%3A%20Set%20up%20QEMU%0A%20%20%20%20%20%20%20%20uses%3A%20docker/setup-qemu-action%40v3%0A%0A%20%20%20%20%20%20-%20name%3A%20Set%20up%20Buildx%0A%20%20%20%20%20%20%20%20uses%3A%20docker/setup-buildx-action%40v3%0A%0A%20%20%20%20%20%20-%20name%3A%20Login%20to%20GHCR%0A%20%20%20%20%20%20%20%20uses%3A%20docker/login-action%40v3%0A%20%20%20%20%20%20%20%20with%3A%0A%20%20%20%20%20%20%20%20%20%20registry%3A%20ghcr.io%0A%20%20%20%20%20%20%20%20%20%20username%3A%20%24%7B%7B%20github.actor%20%7D%7D%0A%20%20%20%20%20%20%20%20%20%20password%3A%20%24%7B%7B%20secrets.GITHUB_TOKEN%20%7D%7D%0A%0A%20%20%20%20%20%20-%20name%3A%20Build%20and%20push%0A%20%20%20%20%20%20%20%20uses%3A%20docker/build-push-action%40v6%0A%20%20%20%20%20%20%20%20with%3A%0A%20%20%20%20%20%20%20%20%20%20context%3A%20.%0A%20%20%20%20%20%20%20%20%20%20platforms%3A%20linux/amd64%2Clinux/arm64%0A%20%20%20%20%20%20%20%20%20%20push%3A%20true%0A%20%20%20%20%20%20%20%20%20%20cache-from%3A%20type%3Dgha%0A%20%20%20%20%20%20%20%20%20%20cache-to%3A%20type%3Dgha%2Cmode%3Dmax%0A%20%20%20%20%20%20%20%20%20%20tags%3A%20%7C%0A%20%20%20%20%20%20%20%20%20%20%20%20ghcr.io/%24%7B%7B%20github.repository%20%7D%7D%3Alatest%0A%20%20%20%20%20%20%20%20%20%20%20%20ghcr.io/%24%7B%7B%20github.repository%20%7D%7D%3A%24%7B%7B%20github.sha%20%7D%7D%0A)
+
+提交后打开仓库 **Actions** 页，`Build multi-arch image` 会自动运行，首次约 5-10 分钟。
+
+### 1. 推送代码到 GitHub（链接失效时用这个）
 
 ```bash
 cd /Users/summer/WorkBuddy/web导航栏
@@ -29,7 +39,49 @@ git push -u origin main
 GitHub 仓库页面 → 右侧 **Packages** → 点 `nas-nav` → **Package settings** →
 **Danger Zone** → **Change visibility** → Public。
 
-### 3. 群晖拉取镜像
+### 3. 用 docker-compose 部署（推荐）
+
+镜像就绪后，群晖上用 compose 最省事。仓库里已准备好 `docker-compose.ghcr.yml`：
+
+```yaml
+services:
+  navideck:
+    image: ghcr.io/xiamy-summer/navideck:latest
+    container_name: navideck
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - /volume1/docker/navideck/data:/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      TZ: Asia/Shanghai
+      DATA_DIR: /data
+      PORT: "3000"
+      JWT_SECRET: please-change-this-secret
+      DEFAULT_ADMIN_PASSWORD: admin123
+      NEXT_PUBLIC_ICONIFY_API: https://api.iconify.design
+```
+
+**DSM 7（Container Manager）**
+
+Container Manager → **项目** → **新增** → 项目名 `navideck` → 路径选 `docker/navideck`
+→ 选择"**使用现有的 docker-compose.yml**"，把上面内容粘贴进去 → 下一步 → 完成。
+Container Manager 会自动拉取镜像并启动容器。
+
+**DSM 6（Docker 套件，无"项目"功能）**
+
+把文件通过 File Station 放到 `docker/navideck/docker-compose.yml`，然后 SSH 登录群晖执行：
+
+```bash
+cd /volume1/docker/navideck
+sudo docker-compose up -d
+```
+
+> 镜像若是私有的，先在 Container Manager → **设置** → **添加注册表** 里填
+> `ghcr.io` + 你的 GitHub 用户名 + Personal Access Token；按上一步设为公开则无需登录。
+
+### 4. 手动创建容器（不用 compose 时）
 
 DSM 7（Container Manager）：
 
@@ -53,6 +105,43 @@ DSM 6（Docker 套件）：步骤相同，入口为 **Docker → 映像 → 添�
 启动容器在 **映像 → 启动 → 高级设置** 里配置端口/卷/环境变量。
 
 访问：`http://<群晖IP>:3000`
+
+### 3b. 用 docker-compose 部署（推荐，以后升级最省事）
+
+容器多了以后，用 compose 比手点界面好管理。仓库里的 `docker-compose.ghcr.yml` 就是给路线 A 准备的：
+
+```yaml
+services:
+  navideck:
+    image: ghcr.io/xiamy-summer/navideck:latest
+    container_name: navideck
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - /volume1/docker/navideck/data:/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      TZ: Asia/Shanghai
+      DATA_DIR: /data
+      PORT: "3000"
+      JWT_SECRET: please-change-this-secret
+      DEFAULT_ADMIN_PASSWORD: admin123
+      NEXT_PUBLIC_ICONIFY_API: https://api.iconify.design
+```
+
+群晖 DSM 7（Container Manager）：
+
+1. **项目 → 新增**，项目名填 `navideck`，路径选一个共享文件夹（如 `docker/navideck`）
+2. 来源选"**创建 docker-compose.yml**"，把上面内容粘贴进去；
+   或者先用 File Station 把 `docker-compose.ghcr.yml` 传到 `docker/navideck/`，再选"**使用现有的 docker-compose.yml**"
+3. 把卷路径 `/volume1/docker/navideck/data` 改成你 NAS 的实际路径（群晖的共享文件夹都在 `/volume1/` 下）
+4. 下一步 → 完成，Container Manager 自动拉镜像并启动
+
+> DSM 6 的 Docker 套件没有"项目"功能，只能按第 3-8 步手动创建容器。
+
+**以后升级**：项目 → 停止 → 重新拉取镜像（`docker compose pull` 或删掉项目重建），
+数据都在 `data` 目录里，不会丢。
 
 ---
 
