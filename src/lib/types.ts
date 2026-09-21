@@ -82,6 +82,13 @@ export interface Settings {
   dockerEnabled: boolean;
   /** 是否允许未登录访客浏览访客账号的内容 */
   guestEnabled: boolean;
+
+  /** 首页信息小组件 */
+  widgetsEnabled: boolean;
+  widgetPosition: 'top' | 'bottom';
+  widgetSystem: boolean;
+  widgetDocker: boolean;
+  widgetRefresh: number;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -120,6 +127,12 @@ export const DEFAULT_SETTINGS: Settings = {
 
   dockerEnabled: true,
   guestEnabled: true,
+
+  widgetsEnabled: true,
+  widgetPosition: 'top',
+  widgetSystem: true,
+  widgetDocker: true,
+  widgetRefresh: 10,
 };
 
 export interface UploadedFile {
