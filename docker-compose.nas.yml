@@ -1,0 +1,24 @@
+# 群晖 NAS 部署用（无需在本机构建镜像，直接跑源码）
+# 用法见 docs/synology.md
+services:
+  nas-nav:
+    image: node:22-bookworm-slim
+    container_name: navideck
+    restart: unless-stopped
+    working_dir: /app
+    command: ["sh", "/app/scripts/start-nas.sh"]
+    ports:
+      - "3000:3000"
+    volumes:
+      # 左边改成你 NAS 上存放源码的共享文件夹路径
+      - /volume1/docker/nas-nav/app:/app
+      # 数据库与上传文件，单独挂载便于备份
+      - /volume1/docker/nas-nav/data:/data
+    environment:
+      TZ: Asia/Shanghai
+      DATA_DIR: /data
+      PORT: "3000"
+      # 生产环境务必改成随机字符串
+      JWT_SECRET: please-change-this-secret
+      DEFAULT_ADMIN_PASSWORD: admin123
+      NEXT_PUBLIC_ICONIFY_API: https://api.iconify.design
