@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.navideck</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/sh</string>
+    <string>/Users/summer/WorkBuddy/web导航栏/scripts/run-local.sh</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/summer/WorkBuddy/web导航栏</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/Users/summer/.workbuddy/binaries/node/versions/22.22.2-3/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>NODE_ENV</key>
+    <string>production</string>
+    <key>DATA_DIR</key>
+    <string>/Users/summer/WorkBuddy/web导航栏/.data</string>
+    <key>PORT</key>
+    <string>3100</string>
+    <key>HOSTNAME</key>
+    <string>0.0.0.0</string>
+    <key>JWT_SECRET</key>
+    <string>a9150afe1e6d102cdaf7163dda197f412d4a5e347e068dd49417fb74f24a5546</string>
+    <key>TZ</key>
+    <string>Asia/Shanghai</string>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/summer/Library/Logs/navideck.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/summer/Library/Logs/navideck.error.log</string>
+</dict>
+</plist>
