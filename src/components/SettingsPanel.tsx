@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { api } from '@/lib/api-client';
+import { api, type SystemStatus } from '@/lib/api-client';
 import { Icon } from './Icon';
+import { DockerPanel } from './DockerPanel';
+import { MetricsPanel } from './MetricsPanel';
 import type { Role, SearchEngine, Settings, UploadedFile, User } from '@/lib/types';
 
-type Tab = 'appearance' | 'search' | 'custom' | 'data' | 'users' | 'about';
+type Tab = 'appearance' | 'search' | 'custom' | 'data' | 'users' | 'status' | 'docker' | 'metrics' | 'about';
 
 const TABS: Array<{ id: Tab; label: string; icon: string; adminOnly?: boolean }> = [
   { id: 'appearance', label: '外观', icon: 'mdi:palette-outline' },
@@ -14,6 +16,9 @@ const TABS: Array<{ id: Tab; label: string; icon: string; adminOnly?: boolean }>
   { id: 'custom', label: '自定义代码', icon: 'mdi:code-braces' },
   { id: 'data', label: '数据与文件', icon: 'mdi:database-outline' },
   { id: 'users', label: '账号', icon: 'mdi:account-multiple-outline', adminOnly: true },
+  { id: 'status', label: '系统状态', icon: 'mdi:chart-box-outline' },
+  { id: 'docker', label: 'Docker', icon: 'mdi:docker', adminOnly: true },
+  { id: 'metrics', label: '监控', icon: 'mdi:chart-line' },
   { id: 'about', label: '关于', icon: 'mdi:information-outline' },
 ];
 
@@ -128,6 +133,9 @@ export function SettingsPanel({ user, initialSettings, users: initialUsers }: Pr
         {tab === 'users' && isAdmin ? (
           <UsersTab users={users} setUsers={setUsers} current={user} toast={setToast} />
         ) : null}
+        {tab === 'status' ? <StatusTab /> : null}
+        {tab === 'docker' && isAdmin ? <DockerPanel toast={setToast} /> : null}
+        {tab === 'metrics' ? <MetricsPanel /> : null}
         {tab === 'about' ? <AboutTab /> : null}
       </div>
 
@@ -289,6 +297,42 @@ function AppearanceTab({ settings, onSave }: { settings: Settings; onSave: (p: P
 
       <Row label="访客访问" hint="允许未登录访客只读浏览访客账号内容">
         <Switch value={settings.guestEnabled} onChange={(v) => onSave({ guestEnabled: v })} />
+      </Row>
+
+      <Row label="首页小组件" hint="导航页显示系统与容器概览卡片">
+        <Switch value={settings.widgetsEnabled} onChange={(v) => onSave({ widgetsEnabled: v })} />
+      </Row>
+
+      <Row label="小组件位置">
+        <div className="flex rounded-xl border border-line p-0.5 text-[13px]">
+          {(['top', 'bottom'] as const).map((p) => (
+            <button
+              key={p}
+              className={`rounded-lg px-3 py-1 ${settings.widgetPosition === p ? 'bg-brand text-white' : 'text-muted'}`}
+              onClick={() => onSave({ widgetPosition: p })}
+            >
+              {p === 'top' ? '顶部' : '底部'}
+            </button>
+          ))}
+        </div>
+      </Row>
+
+      <Row label="系统卡片">
+        <Switch value={settings.widgetSystem} onChange={(v) => onSave({ widgetSystem: v })} />
+      </Row>
+
+      <Row label="容器卡片" hint="需挂载 Docker Socket">
+        <Switch value={settings.widgetDocker} onChange={(v) => onSave({ widgetDocker: v })} />
+      </Row>
+
+      <Row label="刷新间隔">
+        <Num
+          value={settings.widgetRefresh}
+          min={5}
+          max={120}
+          suffix="秒"
+          onChange={(v) => onSave({ widgetRefresh: v })}
+        />
       </Row>
     </div>
   );
@@ -755,6 +799,144 @@ function UsersTab({
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/* ------------------------------ 系统状态 ------------------------------ */
+
+function fmtDuration(s: number): string {
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (d) return `${d} 天 ${h} 小时`;
+  if (h) return `${h} 小时 ${m} 分钟`;
+  return `${m} 分 ${s % 60} 秒`;
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-line/50 py-1.5 text-[13px] last:border-0">
+      <span className="text-muted">{label}</span>
+      <span className="text-right">{value}</span>
+    </div>
+  );
+}
+
+function Bar({ value, max, label, hint }: { value: number; max: number; label: string; hint: string }) {
+  const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
+  return (
+    <div className="py-2">
+      <div className="mb-1 flex justify-between text-[12px]">
+        <span>{label}</span>
+        <span className="text-muted">
+          {hint} · {pct}%
+        </span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-line/70">
+        <div className="h-2 rounded-full bg-brand" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function StatusTab() {
+  const [data, setData] = useState<SystemStatus | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      setData(await api.system());
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '读取失败');
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+    const timer = setInterval(() => void load(), 10000);
+    return () => clearInterval(timer);
+  }, [load]);
+
+  if (error) return <p className="py-6 text-center text-[13px] text-red-500">{error}</p>;
+  if (!data) return <p className="py-6 text-center text-[13px] text-muted">加载中…</p>;
+
+  const usedMem = +(data.host.totalMemGb - data.host.freeMemGb).toFixed(1);
+
+  return (
+    <div>
+      <div className="mb-4 flex items-center">
+        <h3 className="text-[14px] font-medium">系统状态</h3>
+        <span className="chip ml-2">每 10 秒刷新</span>
+        <button className="btn ml-auto" onClick={() => void load()}>
+          <Icon icon="mdi:refresh" size={16} title="刷新" />
+          刷新
+        </button>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="rounded-xl border border-line p-4">
+          <div className="mb-2 flex items-center gap-1.5 text-[13px] font-medium">
+            <Icon icon="mdi:server-outline" size={17} title="服务" />
+            面板服务
+          </div>
+          <Stat label="版本" value={`v${data.version}`} />
+          <Stat label="运行时长" value={fmtDuration(data.service.uptime)} />
+          <Stat label="进程 PID" value={String(data.service.pid)} />
+          <Stat label="Node 版本" value={data.service.nodeVersion} />
+          <Stat label="内存占用" value={`${data.service.rssMb} MB`} />
+          <Stat label="堆内存" value={`${data.service.heapUsedMb} MB`} />
+        </div>
+
+        <div className="rounded-xl border border-line p-4">
+          <div className="mb-2 flex items-center gap-1.5 text-[13px] font-medium">
+            <Icon icon="mdi:chip" size={17} title="主机" />
+            主机
+          </div>
+          <Stat label="主机名" value={data.host.hostname} />
+          <Stat label="系统" value={`${data.host.platform} · ${data.host.arch}`} />
+          <Stat label="CPU" value={`${data.host.cpuCount} 核`} />
+          <Stat label="CPU 型号" value={data.host.cpuModel} />
+          <Stat label="负载" value={data.host.loadAvg.join(' / ')} />
+          <Stat label="开机时长" value={fmtDuration(data.host.osUptime)} />
+          <Bar
+            value={usedMem}
+            max={data.host.totalMemGb}
+            label="内存使用"
+            hint={`${usedMem} / ${data.host.totalMemGb} GB`}
+          />
+        </div>
+
+        <div className="rounded-xl border border-line p-4">
+          <div className="mb-2 flex items-center gap-1.5 text-[13px] font-medium">
+            <Icon icon="mdi:database-outline" size={17} title="数据" />
+            数据
+          </div>
+          <Stat label="分组" value={`${data.data.groups} 个`} />
+          <Stat label="站点" value={`${data.data.items} 个`} />
+          <Stat label="上传文件" value={`${data.data.files} 个`} />
+          <Stat label="账号" value={`${data.data.users} 个`} />
+          <Stat label="数据库" value={`${data.data.dbSizeMb} MB`} />
+          <Stat label="数据目录" value={data.data.dataDir} />
+        </div>
+
+        <div className="rounded-xl border border-line p-4">
+          <div className="mb-2 flex items-center gap-1.5 text-[13px] font-medium">
+            <Icon icon="mdi:console" size={17} title="运维" />
+            运维命令
+          </div>
+          <div className="space-y-1.5 font-mono text-[12px] text-muted">
+            <div>sh scripts/start.sh　启动</div>
+            <div>sh scripts/stop.sh　　停止</div>
+            <div>sh scripts/update.sh　更新重启</div>
+            <div>sh scripts/address.sh 查看地址</div>
+          </div>
+          <p className="mt-2 text-[12px] text-muted">
+            日志：项目目录 logs/navideck.log
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
