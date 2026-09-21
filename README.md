@@ -105,7 +105,7 @@ DATA_DIR=/var/lib/nas-nav JWT_SECRET=随机字符串 node .next/standalone/serve
 | `DATA_DIR` | `.data` | SQLite 数据库与上传文件目录，Docker 中为 `/data` |
 | `JWT_SECRET` | 内置开发密钥 | 登录会话签名密钥，**生产必须修改** |
 | `DEFAULT_ADMIN_PASSWORD` | `admin123` | 首次启动创建 `admin` 的初始密码 |
-| `NEXT_PUBLIC_ICONIFY_API` | `https://api.iconify.design` | 图标服务地址，可替换为自建或镜像 |
+| `NEXT_PUBLIC_ICONIFY_API` | `https://api.iconify.design` | 图标在线服务地址（离线包未覆盖的图标才走这里） |
 | `PORT` | `3000` | 监听端口 |
 
 ## 目录结构
@@ -121,7 +121,7 @@ src/
 │   ├── HomeView.tsx             首页状态与交互中枢
 │   ├── NavBoard.tsx             拖拽排序核心（dnd-kit 多容器）
 │   ├── SearchBar.tsx            搜索框与搜索引擎切换
-│   ├── Icon.tsx / IconPicker.tsx Iconify 图标渲染与选择器
+│   ├── Icon.tsx / IconPicker.tsx Iconify 图标渲染（离线包优先）与选择器
 │   ├── WebModal.tsx             内置小窗口
 │   ├── Dialogs.tsx              站点/分组编辑与确认弹窗
 │   └── SettingsPanel.tsx        设置中心（外观/搜索/自定义/数据/账号/关于）
@@ -142,8 +142,9 @@ SQLite 表：`users`、`groups`、`items`、`settings`、`files`。
 ## 常见问题
 
 **图标不显示？**
-图标通过 Iconify 在线接口加载，若 NAS 无外网或访问缓慢，可将 `NEXT_PUBLIC_ICONIFY_API`
-指向自建 Iconify API 服务；无网络时会自动降级为文字首字占位，不影响使用。
+图标默认优先使用**内置离线包**（`public/icon-pack/collection.json`，随镜像同源发布，包含常用 NAS / 自托管 / 品牌与 UI 图标约 365 个），断网也能渲染；
+离线包未覆盖的图标才走 `NEXT_PUBLIC_ICONIFY_API` 在线加载；都失败则自动降级为文字首字占位，不影响使用。
+如需扩充离线包，编辑 `scripts/build-icon-pack.py` 的种子清单后运行 `python3 scripts/build-icon-pack.py` 重新生成并提交即可。
 
 **内置小窗口打不开某些站点？**
 部分站点设置了 `X-Frame-Options` / CSP 拒绝被嵌入，此时弹窗会提示改用新标签页打开，
