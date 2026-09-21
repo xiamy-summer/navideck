@@ -1,0 +1,22 @@
+# 路线 A：直接拉取 GitHub Actions 构建好的镜像，群晖 Container Manager 的"项目"用这份
+# 镜像：ghcr.io/xiamy-summer/navideck:latest（amd64 + arm64 双架构，群晖自动匹配）
+services:
+  navideck:
+    image: ghcr.io/xiamy-summer/navideck:latest
+    container_name: navideck
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      # 左边改成你 NAS 上的实际路径：数据库与上传文件，单独挂载方便备份
+      - /volume1/docker/navideck/data:/data
+      # 只读挂载 Docker Socket（后续容器管理功能用），暂不需要可删掉这两行
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      TZ: Asia/Shanghai
+      DATA_DIR: /data
+      PORT: "3000"
+      # 生产环境务必改成随机字符串
+      JWT_SECRET: please-change-this-secret
+      DEFAULT_ADMIN_PASSWORD: admin123
+      NEXT_PUBLIC_ICONIFY_API: https://api.iconify.design
