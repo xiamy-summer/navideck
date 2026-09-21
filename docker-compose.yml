@@ -1,0 +1,22 @@
+services:
+  nas-nav:
+    build: .
+    image: nas-nav:latest
+    container_name: navideck
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      # 数据持久化：SQLite 数据库与上传文件
+      - ./data:/data
+      # 挂载 Docker Socket：后续版本用于容器状态查看与启停（如暂不需要可注释掉）
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      TZ: Asia/Shanghai
+      DATA_DIR: /data
+      # 生产环境务必修改为随机字符串
+      JWT_SECRET: please-change-this-secret
+      # 首次启动自动创建的管理员密码
+      DEFAULT_ADMIN_PASSWORD: admin123
+      # 图标服务，国内可改为自建或镜像地址
+      NEXT_PUBLIC_ICONIFY_API: https://api.iconify.design
