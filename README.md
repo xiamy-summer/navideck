@@ -38,6 +38,24 @@ docker compose up -d
 首次启动会自动创建管理员账号，密码取自环境变量 `DEFAULT_ADMIN_PASSWORD`（默认 `admin123`），
 并创建只读的 `guest` 访客账号。登录后请立即修改密码。
 
+### 本地长期运行（macOS / Linux，最简单）
+
+```bash
+sh scripts/start.sh     # 后台常驻启动，关闭终端也不受影响
+sh scripts/stop.sh      # 停止
+sh scripts/update.sh    # 改了代码后：重新构建并重启
+sh scripts/address.sh   # 查看当前访问地址
+```
+
+启动后终端会打印访问地址，形如 `http://192.168.3.81:3100`，同一局域网内的手机、平板、另一台电脑都能直接打开。
+数据保存在项目目录的 `.data/`，面板里增删改的内容实时写库，**不需要重启**。
+
+想开机自启，把 `scripts/com.navideck.plist` 复制到 `~/Library/LaunchAgents/` 后执行：
+
+```bash
+launchctl load -w ~/Library/LaunchAgents/com.navideck.plist
+```
+
 ### 群晖 NAS 部署（本机没有 Docker 时）
 
 群晖只能拉现成镜像，不能用 Dockerfile 构建，因此提供两条路线：
