@@ -1,0 +1,129 @@
+import type { Group, Item, OpenMode, Role, Settings, UploadedFile, User } from './types';
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(path, {
+    ...init,
+    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
+  });
+  const text = await res.text();
+  let data: unknown = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = text;
+  }
+  if (!res.ok) {
+    const message =
+      data && typeof data === 'object' && 'error' in data
+        ? String((data as { error: string }).error)
+        : `请求失败 (${res.status})`;
+    throw new Error(message);
+  }
+  return data as T;
+}
+
+const asQuery = (as?: number | null) => (as ? `?as=${as}` : '');
+
+export type GroupWithItems = Group & { items: Item[] };
+
+export const api = {
+  login: (username: string, password: string) =>
+    request<User>('/api/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
+
+  logout: () => request<{ success: boolean }>('/api/auth/logout', { method: 'POST' }),
+
+  me: () => request<{ user: User | null; guestId: number | null; settings: Settings; users: User[] }>('/api/auth/me'),
+
+  changePassword: (oldPassword: string, newPassword: string) =>
+    request<{ success: boolean }>('/api/auth/password', {
+      method: 'POST',
+      body: JSON.stringify({ oldPassword, newPassword }),
+    }),
+
+  groups: (as?: number | null) => request<GroupWithItems[]>(`/api/groups${asQuery(as)}`),
+
+  createGroup: (name: string, icon: string | null, as?: number | null) =>
+    request<Group>(`/api/groups${asQuery(as)}`, { method: 'POST', body: JSON.stringify({ name, icon }) }),
+
+  updateGroup: (id: number, patch: { name?: string; icon?: string | null; sort?: number }, as?: number | null) =>
+    request<Group>(`/api/groups/${id}${asQuery(as)}`, { method: 'PATCH', body: JSON.stringify(patch) }),
+
+  deleteGroup: (id: number, as?: number | null) =>
+    request<{ success: boolean }>(`/api/groups/${id}${asQuery(as)}`, { method: 'DELETE' }),
+
+  reorderGroups: (ids: number[], as?: number | null) =>
+    request<{ success: boolean }>(`/api/groups/reorder${asQuery(as)}`, {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    }),
+
+  createItem: (
+    input: {
+      groupId: number;
+      title: string;
+      icon?: string | null;
+      urlLan?: string;
+      urlWan?: string;
+      desc?: string;
+      openMode?: OpenMode;
+      color?: string | null;
+    },
+    as?: number | null,
+  ) => request<Item>(`/api/items${asQuery(as)}`, { method: 'POST', body: JSON.stringify(input) }),
+
+  updateItem: (
+    id: number,
+    patch: Partial<Pick<Item, 'title' | 'icon' | 'urlLan' | 'urlWan' | 'desc' | 'openMode' | 'color' | 'sort' | 'groupId'>>,
+    as?: number | null,
+  ) => request<Item>(`/api/items/${id}${asQuery(as)}`, { method: 'PATCH', body: JSON.stringify(patch) }),
+
+  deleteItem: (id: number, as?: number | null) =>
+    request<{ success: boolean }>(`/api/items/${id}${asQuery(as)}`, { method: 'DELETE' }),
+
+  reorderItems: (groupId: number, ids: number[], as?: number | null) =>
+    request<{ success: boolean }>(`/api/items/reorder${asQuery(as)}`, {
+      method: 'POST',
+      body: JSON.stringify({ ids, groupId }),
+    }),
+
+  settings: (as?: number | null, global = false) =>
+    request<Settings>(`/api/settings${asQuery(as)}${global ? (as ? '&' : '?') + 'global=1' : ''}`),
+
+  saveSettings: (patch: Partial<Settings>, as?: number | null, global = false) =>
+    request<Settings>(`/api/settings${asQuery(as)}${global ? (as ? '&' : '?') + 'global=1' : ''}`, {
+      method: 'PUT',
+      body: JSON.stringify(patch),
+    }),
+
+  resetSettings: (as?: number | null) =>
+    request<Settings>(`/api/settings/reset${asQuery(as)}`, { method: 'POST' }),
+
+  users: () => request<User[]>('/api/users'),
+
+  createUser: (username: string, password: string, role: Role) =>
+    request<User>('/api/users', { method: 'POST', body: JSON.stringify({ username, password, role }) }),
+
+  updateUser: (id: number, patch: { username?: string; password?: string; role?: Role }) =>
+    request<User>(`/api/users/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
+
+  deleteUser: (id: number) => request<{ success: boolean }>(`/api/users/${id}`, { method: 'DELETE' }),
+
+  uploadFile: async (file: File, as?: number | null) => {
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch(`/api/upload${asQuery(as)}`, { method: 'POST', body: form });
+    if (!res.ok) throw new Error('上传失败');
+    return (await res.json()) as UploadedFile & { dedup: boolean };
+  },
+
+  listFiles: (as?: number | null) => request<UploadedFile[]>(`/api/upload${asQuery(as)}`),
+
+  deleteFile: (id: number, as?: number | null) =>
+    request<{ success: boolean }>(`/api/upload${asQuery(as)}${as ? '&' : '?'}id=${id}`, { method: 'DELETE' }),
+
+  importData: (payload: unknown, mode: 'replace' | 'append', as?: number | null) =>
+    request<{ success: boolean; groupCount: number; itemCount: number }>(`/api/import${asQuery(as)}`, {
+      method: 'POST',
+      body: JSON.stringify({ payload, mode }),
+    }),
+};
