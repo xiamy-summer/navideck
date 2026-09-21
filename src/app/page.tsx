@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { getGlobalSettings, getUserByName, getUserSettings, listGroups, listItems, listUsers } from '@/lib/db';
 import { ensureBootstrap } from '@/lib/bootstrap';
 import { HomeView } from '@/components/HomeView';
+import { I18nProvider } from '@/i18n';
 import type { GroupWithItems } from '@/lib/api-client';
 
 export const dynamic = 'force-dynamic';
@@ -27,12 +28,14 @@ export default async function Page() {
   })) as GroupWithItems[];
 
   return (
-    <HomeView
-      user={me}
-      initialGroups={groups}
-      settings={getUserSettings(ownerId!)}
-      isGuestView={isGuestView}
-      users={me?.role === 'admin' ? listUsers() : []}
-    />
+    <I18nProvider lang={getUserSettings(ownerId!).lang}>
+      <HomeView
+        user={me}
+        initialGroups={groups}
+        settings={getUserSettings(ownerId!)}
+        isGuestView={isGuestView}
+        users={me?.role === 'admin' ? listUsers() : []}
+      />
+    </I18nProvider>
   );
 }

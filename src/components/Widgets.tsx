@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, type DockerListResult, type MetricsResult } from '@/lib/api-client';
 import { Icon } from './Icon';
 import { Sparkline } from './Sparkline';
+import { useI18n } from '@/i18n';
 
 interface Props {
   showSystem: boolean;
@@ -17,16 +18,17 @@ function fmtRate(bytes: number): string {
   return `${bytes} B/s`;
 }
 
-function fmtUptime(sec: number): string {
+function fmtUptime(sec: number, t: (k: string, p?: Record<string, string | number>) => string): string {
   const d = Math.floor(sec / 86400);
   const h = Math.floor((sec % 86400) / 3600);
   const m = Math.floor((sec % 3600) / 60);
-  if (d) return `${d} 天 ${h} 小时`;
-  if (h) return `${h} 小时 ${m} 分`;
-  return `${m} 分钟`;
+  if (d) return `${d} ${t('common.day')} ${h} ${t('common.hour')}`;
+  if (h) return `${h} ${t('common.hour')} ${m} ${t('common.minute')}`;
+  return `${m} ${t('common.minute')}`;
 }
 
 export function Widgets({ showSystem, showDocker, refreshSec = 10 }: Props) {
+  const { t } = useI18n();
   const [metrics, setMetrics] = useState<MetricsResult | null>(null);
   const [docker, setDocker] = useState<DockerListResult | null>(null);
 
@@ -63,31 +65,26 @@ export function Widgets({ showSystem, showDocker, refreshSec = 10 }: Props) {
       {showSystem ? (
         <div className="card p-4">
           <div className="mb-2 flex items-center gap-1.5">
-            <Icon icon="mdi:chip" size={17} title="系统" />
-            <span className="text-[13px] font-medium">系统</span>
+            <Icon icon="mdi:chip" size={17} title={t('widget.system')} />
+            <span className="text-[13px] font-medium">{t('widget.system')}</span>
             <span className="ml-auto text-[11px] text-muted">
-              {metrics ? `负载 ${metrics.cpu.loadAvg[0]}` : '加载中…'}
+              {metrics ? t('widget.load', { n: metrics.cpu.loadAvg[0] }) : t('common.loading')}
             </span>
           </div>
 
-          <Sparkline data={cpuHistory} label="CPU" value={metrics?.current.cpu} />
+          <Sparkline data={cpuHistory} label={t('metrics.cpu')} value={metrics?.current.cpu} />
           <div className="mt-1">
-            <Sparkline
-              data={memHistory}
-              label="内存"
-              value={metrics?.current.mem}
-              color="#10b981"
-            />
+            <Sparkline data={memHistory} label={t('metrics.memory')} value={metrics?.current.mem} color="#10b981" />
           </div>
 
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted">
-            <span>磁盘 {metrics?.disk.usedPercent ?? 0}%</span>
-            <span>
-              {metrics ? `${metrics.disk.usedGb} / ${metrics.disk.totalGb} GB` : ''}
-            </span>
+            <span>{t('widget.disk', { n: metrics?.disk.usedPercent ?? 0 })}</span>
+            <span>{metrics ? `${metrics.disk.usedGb} / ${metrics.disk.totalGb} GB` : ''}</span>
             <span>↓ {fmtRate(metrics?.current.netRx ?? 0)}</span>
             <span>↑ {fmtRate(metrics?.current.netTx ?? 0)}</span>
-            <span>开机 {metrics ? fmtUptime(metrics.osUptime) : ''}</span>
+            <span>
+              {t('widget.uptime')} {metrics ? fmtUptime(metrics.osUptime, t) : ''}
+            </span>
           </div>
         </div>
       ) : null}
@@ -96,24 +93,25 @@ export function Widgets({ showSystem, showDocker, refreshSec = 10 }: Props) {
         <div className="card p-4">
           <div className="mb-2 flex items-center gap-1.5">
             <Icon icon="mdi:docker" size={17} title="Docker" />
-            <span className="text-[13px] font-medium">容器</span>
+            <span className="text-[13px] font-medium">{t('widget.containers')}</span>
             {docker?.available ? (
               <span className="ml-auto text-[11px] text-muted">
-                运行中 {docker.containers.filter((c) => c.state === 'running').length} / {docker.containers.length}
+                {t('widget.running', {
+                  r: docker.containers.filter((c) => c.state === 'running').length,
+                  t: docker.containers.length,
+                })}
               </span>
             ) : (
-              <span className="ml-auto text-[11px] text-muted">未连接</span>
+              <span className="ml-auto text-[11px] text-muted">{t('widget.notConnected')}</span>
             )}
           </div>
 
           {!docker ? (
-            <p className="py-4 text-[12px] text-muted">加载中…</p>
+            <p className="py-4 text-[12px] text-muted">{t('common.loading')}</p>
           ) : !docker.available ? (
-            <p className="py-2 text-[12px] text-muted">
-              未检测到 Docker Socket（{docker.socket}）
-            </p>
+            <p className="py-2 text-[12px] text-muted">{t('widget.dockerNoSocket', { socket: docker.socket })}</p>
           ) : docker.containers.length === 0 ? (
-            <p className="py-4 text-[12px] text-muted">暂无容器</p>
+            <p className="py-4 text-[12px] text-muted">{t('widget.noContainers')}</p>
           ) : (
             <div className="space-y-1">
               {docker.containers.slice(0, 5).map((c) => (
@@ -127,7 +125,7 @@ export function Widgets({ showSystem, showDocker, refreshSec = 10 }: Props) {
                 </div>
               ))}
               {docker.containers.length > 5 ? (
-                <div className="text-[11px] text-muted">还有 {docker.containers.length - 5} 个…</div>
+                <div className="text-[11px] text-muted">{t('widget.moreContainers', { n: docker.containers.length - 5 })}</div>
               ) : null}
             </div>
           )}

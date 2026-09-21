@@ -7,19 +7,20 @@ import { Icon } from './Icon';
 import { DockerPanel } from './DockerPanel';
 import { MetricsPanel } from './MetricsPanel';
 import type { Role, SearchEngine, Settings, UploadedFile, User } from '@/lib/types';
+import { useI18n, LANGS, type Lang } from '@/i18n';
 
 type Tab = 'appearance' | 'search' | 'custom' | 'data' | 'users' | 'status' | 'docker' | 'metrics' | 'about';
 
-const TABS: Array<{ id: Tab; label: string; icon: string; adminOnly?: boolean }> = [
-  { id: 'appearance', label: '外观', icon: 'mdi:palette-outline' },
-  { id: 'search', label: '搜索', icon: 'mdi:magnify' },
-  { id: 'custom', label: '自定义代码', icon: 'mdi:code-braces' },
-  { id: 'data', label: '数据与文件', icon: 'mdi:database-outline' },
-  { id: 'users', label: '账号', icon: 'mdi:account-multiple-outline', adminOnly: true },
-  { id: 'status', label: '系统状态', icon: 'mdi:chart-box-outline' },
-  { id: 'docker', label: 'Docker', icon: 'mdi:docker', adminOnly: true },
-  { id: 'metrics', label: '监控', icon: 'mdi:chart-line' },
-  { id: 'about', label: '关于', icon: 'mdi:information-outline' },
+const TABS: Array<{ id: Tab; icon: string; adminOnly?: boolean }> = [
+  { id: 'appearance', icon: 'mdi:palette-outline' },
+  { id: 'search', icon: 'mdi:magnify' },
+  { id: 'custom', icon: 'mdi:code-braces' },
+  { id: 'data', icon: 'mdi:database-outline' },
+  { id: 'users', icon: 'mdi:account-multiple-outline', adminOnly: true },
+  { id: 'status', icon: 'mdi:chart-box-outline' },
+  { id: 'docker', icon: 'mdi:docker', adminOnly: true },
+  { id: 'metrics', icon: 'mdi:chart-line' },
+  { id: 'about', icon: 'mdi:information-outline' },
 ];
 
 interface Props {
@@ -29,6 +30,7 @@ interface Props {
 }
 
 export function SettingsPanel({ user, initialSettings, users: initialUsers }: Props) {
+  const { t, setLang } = useI18n();
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('appearance');
   const [settings, setSettings] = useState<Settings>(initialSettings);
@@ -41,15 +43,15 @@ export function SettingsPanel({ user, initialSettings, users: initialUsers }: Pr
 
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 2200);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setToast(null), 2200);
+    return () => clearTimeout(timer);
   }, [toast]);
 
   const reload = async (nextAs: number | null, nextGlobal: boolean) => {
     try {
       setSettings(await api.settings(nextAs ?? undefined, nextGlobal));
     } catch {
-      setToast('读取设置失败');
+      setToast(t('settings.loadFailed'));
     }
   };
 
@@ -59,7 +61,7 @@ export function SettingsPanel({ user, initialSettings, users: initialUsers }: Pr
       const saved = await api.saveSettings(patch, as ?? undefined, isGlobal);
       setSettings(saved);
     } catch (err) {
-      setToast(err instanceof Error ? err.message : '保存失败');
+      setToast(err instanceof Error ? err.message : t('common.saveFailed'));
     }
   };
 
@@ -80,10 +82,10 @@ export function SettingsPanel({ user, initialSettings, users: initialUsers }: Pr
     <div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6">
       <div className="mb-5 flex flex-wrap items-center gap-2">
         <button className="btn btn-ghost" onClick={() => router.push('/')}>
-          <Icon icon="mdi:arrow-left" size={18} title="返回" />
-          返回首页
+          <Icon icon="mdi:arrow-left" size={18} title={t('common.backHome')} />
+          {t('common.backHome')}
         </button>
-        <h1 className="text-[17px] font-medium">设置中心</h1>
+        <h1 className="text-[17px] font-medium">{t('settings.title')}</h1>
 
         {isAdmin ? (
           <select
@@ -91,11 +93,11 @@ export function SettingsPanel({ user, initialSettings, users: initialUsers }: Pr
             value={isGlobal ? 'global' : as === null ? 'self' : String(as)}
             onChange={(e) => selectTarget(e.target.value)}
           >
-            <option value="self">我的配置</option>
-            <option value="global">全局默认（新用户继承）</option>
+            <option value="self">{t('settings.targetSelf')}</option>
+            <option value="global">{t('settings.targetGlobal')}</option>
             {users.map((u) => (
               <option key={u.id} value={u.id}>
-                {u.role === 'guest' ? '访客账号' : `用户：${u.username}`}
+                {u.role === 'guest' ? t('home.editGuest') : t('users.userLabel', { name: u.username })}
               </option>
             ))}
           </select>
@@ -103,21 +105,21 @@ export function SettingsPanel({ user, initialSettings, users: initialUsers }: Pr
       </div>
 
       <div className="mb-5 flex flex-wrap gap-1.5">
-        {TABS.filter((t) => !t.adminOnly || isAdmin).map((t) => (
+        {TABS.filter((tabMeta) => !tabMeta.adminOnly || isAdmin).map((tabMeta) => (
           <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`btn ${tab === t.id ? 'btn-primary' : ''}`}
+            key={tabMeta.id}
+            onClick={() => setTab(tabMeta.id)}
+            className={`btn ${tab === tabMeta.id ? 'btn-primary' : ''}`}
           >
-            <Icon icon={t.icon} size={17} title={t.label} />
-            {t.label}
+            <Icon icon={tabMeta.icon} size={17} title={t(`tab.${tabMeta.id}`)} />
+            {t(`tab.${tabMeta.id}`)}
           </button>
         ))}
       </div>
 
       <div className="card p-5">
         {tab === 'appearance' ? (
-          <AppearanceTab settings={settings} onSave={save} />
+          <AppearanceTab settings={settings} onSave={save} setLang={setLang} />
         ) : null}
         {tab === 'search' ? <SearchTab settings={settings} onSave={save} /> : null}
         {tab === 'custom' ? <CustomTab settings={settings} onSave={save} /> : null}
@@ -211,14 +213,27 @@ function Num({
 
 /* ------------------------------ 外观 ------------------------------ */
 
-function AppearanceTab({ settings, onSave }: { settings: Settings; onSave: (p: Partial<Settings>) => void }) {
+function AppearanceTab({
+  settings,
+  onSave,
+  setLang,
+}: {
+  settings: Settings;
+  onSave: (p: Partial<Settings>) => void;
+  setLang: (lang: Lang) => void;
+}) {
+  const { t } = useI18n();
+  const changeLang = (next: Lang) => {
+    onSave({ lang: next });
+    setLang(next);
+  };
   return (
     <div>
-      <Row label="站点标题">
+      <Row label={t('appearance.siteTitle')}>
         <input className="field w-56" value={settings.siteTitle} onChange={(e) => onSave({ siteTitle: e.target.value })} />
       </Row>
 
-      <Row label="主题模式" hint="自动跟随系统">
+      <Row label={t('appearance.theme')} hint={t('appearance.themeHint')}>
         <div className="flex rounded-xl border border-line p-0.5 text-[13px]">
           {(['auto', 'light', 'dark'] as const).map((m) => (
             <button
@@ -226,13 +241,13 @@ function AppearanceTab({ settings, onSave }: { settings: Settings; onSave: (p: P
               className={`rounded-lg px-3 py-1 ${settings.theme === m ? 'bg-brand text-white' : 'text-muted'}`}
               onClick={() => onSave({ theme: m })}
             >
-              {m === 'auto' ? '自动' : m === 'light' ? '亮色' : '暗色'}
+              {m === 'auto' ? t('theme.auto') : m === 'light' ? t('theme.light') : t('theme.dark')}
             </button>
           ))}
         </div>
       </Row>
 
-      <Row label="主题色">
+      <Row label={t('appearance.accent')}>
         <input
           type="color"
           value={settings.accent}
@@ -242,7 +257,7 @@ function AppearanceTab({ settings, onSave }: { settings: Settings; onSave: (p: P
         <input className="field w-28" value={settings.accent} onChange={(e) => onSave({ accent: e.target.value })} />
       </Row>
 
-      <Row label="背景图片" hint="填写图片 URL，留空为纯色">
+      <Row label={t('appearance.bgImage')} hint={t('appearance.bgImageHint')}>
         <input
           className="field w-64"
           placeholder="https://…/bg.jpg"
@@ -251,37 +266,47 @@ function AppearanceTab({ settings, onSave }: { settings: Settings; onSave: (p: P
         />
       </Row>
 
-      <Row label="每行卡片数">
+      <Row label={t('appearance.language')}>
+        <select className="field w-40" value={settings.lang} onChange={(e) => changeLang(e.target.value as Lang)}>
+          {LANGS.map((l) => (
+            <option key={l.id} value={l.id}>
+              {l.label}
+            </option>
+          ))}
+        </select>
+      </Row>
+
+      <Row label={t('appearance.columns')}>
         <Num value={settings.columns} min={2} max={12} onChange={(v) => onSave({ columns: v })} />
       </Row>
 
-      <Row label="卡片圆角">
+      <Row label={t('appearance.cardRadius')}>
         <Num value={settings.cardRadius} min={0} max={28} suffix="px" onChange={(v) => onSave({ cardRadius: v })} />
       </Row>
 
-      <Row label="卡片不透明度">
+      <Row label={t('appearance.cardOpacity')}>
         <Num value={settings.cardOpacity} min={30} max={100} suffix="%" onChange={(v) => onSave({ cardOpacity: v })} />
       </Row>
 
-      <Row label="图标尺寸">
+      <Row label={t('appearance.iconSize')}>
         <Num value={settings.iconSize} min={20} max={64} suffix="px" onChange={(v) => onSave({ iconSize: v })} />
       </Row>
 
-      <Row label="显示描述文字">
+      <Row label={t('appearance.showDesc')}>
         <Switch value={settings.showDesc} onChange={(v) => onSave({ showDesc: v })} />
       </Row>
 
-      <Row label="页脚">
+      <Row label={t('appearance.footer')}>
         <Switch value={settings.footerEnabled} onChange={(v) => onSave({ footerEnabled: v })} />
         <input
           className="field w-64"
-          placeholder="页脚内容，支持 HTML"
+          placeholder={t('appearance.footerPlaceholder')}
           value={settings.footerText}
           onChange={(e) => onSave({ footerText: e.target.value })}
         />
       </Row>
 
-      <Row label="默认网络模式">
+      <Row label={t('appearance.netMode')}>
         <div className="flex rounded-xl border border-line p-0.5 text-[13px]">
           {(['lan', 'wan'] as const).map((m) => (
             <button
@@ -289,21 +314,21 @@ function AppearanceTab({ settings, onSave }: { settings: Settings; onSave: (p: P
               className={`rounded-lg px-3 py-1 ${settings.netMode === m ? 'bg-brand text-white' : 'text-muted'}`}
               onClick={() => onSave({ netMode: m })}
             >
-              {m === 'lan' ? '内网' : '外网'}
+              {m === 'lan' ? t('net.lan') : t('net.wan')}
             </button>
           ))}
         </div>
       </Row>
 
-      <Row label="访客访问" hint="允许未登录访客只读浏览访客账号内容">
+      <Row label={t('appearance.guest')} hint={t('appearance.guestHint')}>
         <Switch value={settings.guestEnabled} onChange={(v) => onSave({ guestEnabled: v })} />
       </Row>
 
-      <Row label="首页小组件" hint="导航页显示系统与容器概览卡片">
+      <Row label={t('appearance.widgets')} hint={t('appearance.widgetsHint')}>
         <Switch value={settings.widgetsEnabled} onChange={(v) => onSave({ widgetsEnabled: v })} />
       </Row>
 
-      <Row label="小组件位置">
+      <Row label={t('appearance.widgetPosition')}>
         <div className="flex rounded-xl border border-line p-0.5 text-[13px]">
           {(['top', 'bottom'] as const).map((p) => (
             <button
@@ -311,26 +336,26 @@ function AppearanceTab({ settings, onSave }: { settings: Settings; onSave: (p: P
               className={`rounded-lg px-3 py-1 ${settings.widgetPosition === p ? 'bg-brand text-white' : 'text-muted'}`}
               onClick={() => onSave({ widgetPosition: p })}
             >
-              {p === 'top' ? '顶部' : '底部'}
+              {p === 'top' ? t('appearance.positionTop') : t('appearance.positionBottom')}
             </button>
           ))}
         </div>
       </Row>
 
-      <Row label="系统卡片">
+      <Row label={t('appearance.widgetSystem')}>
         <Switch value={settings.widgetSystem} onChange={(v) => onSave({ widgetSystem: v })} />
       </Row>
 
-      <Row label="容器卡片" hint="需挂载 Docker Socket">
+      <Row label={t('appearance.widgetDocker')} hint={t('appearance.widgetDockerHint')}>
         <Switch value={settings.widgetDocker} onChange={(v) => onSave({ widgetDocker: v })} />
       </Row>
 
-      <Row label="刷新间隔">
+      <Row label={t('appearance.widgetRefresh')}>
         <Num
           value={settings.widgetRefresh}
           min={5}
           max={120}
-          suffix="秒"
+          suffix={t('common.second')}
           onChange={(v) => onSave({ widgetRefresh: v })}
         />
       </Row>
@@ -341,17 +366,18 @@ function AppearanceTab({ settings, onSave }: { settings: Settings; onSave: (p: P
 /* ------------------------------ 搜索 ------------------------------ */
 
 function SearchTab({ settings, onSave }: { settings: Settings; onSave: (p: Partial<Settings>) => void }) {
+  const { t } = useI18n();
   const engines = settings.searchEngines ?? [];
 
   const updateEngines = (next: SearchEngine[]) => onSave({ searchEngines: next });
 
   return (
     <div>
-      <Row label="启用搜索框">
+      <Row label={t('search.enabled')}>
         <Switch value={settings.searchEnabled} onChange={(v) => onSave({ searchEnabled: v })} />
       </Row>
 
-      <Row label="提示文字">
+      <Row label={t('search.placeholderLabel')}>
         <input
           className="field w-56"
           value={settings.searchPlaceholder}
@@ -359,7 +385,7 @@ function SearchTab({ settings, onSave }: { settings: Settings; onSave: (p: Parti
         />
       </Row>
 
-      <Row label="默认引擎">
+      <Row label={t('search.defaultEngine')}>
         <select
           className="field w-40"
           value={settings.searchEngine}
@@ -373,15 +399,15 @@ function SearchTab({ settings, onSave }: { settings: Settings; onSave: (p: Parti
         </select>
       </Row>
 
-      <Row label="搜索框宽度">
+      <Row label={t('search.width')}>
         <Num value={settings.searchWidth} min={240} max={900} suffix="px" onChange={(v) => onSave({ searchWidth: v })} />
       </Row>
 
-      <Row label="搜索框圆角">
+      <Row label={t('search.radius')}>
         <Num value={settings.searchRadius} min={0} max={999} suffix="px" onChange={(v) => onSave({ searchRadius: v })} />
       </Row>
 
-      <Row label="背景颜色" hint="留空则跟随主题">
+      <Row label={t('search.bgColor')} hint={t('search.followTheme')}>
         <input
           type="color"
           value={settings.searchBg || '#ffffff'}
@@ -389,11 +415,11 @@ function SearchTab({ settings, onSave }: { settings: Settings; onSave: (p: Parti
           className="h-8 w-14 cursor-pointer rounded border border-line bg-transparent"
         />
         <button className="btn" onClick={() => onSave({ searchBg: '' })}>
-          跟随主题
+          {t('search.followTheme')}
         </button>
       </Row>
 
-      <Row label="文字颜色" hint="留空则跟随主题">
+      <Row label={t('search.textColor')} hint={t('search.followTheme')}>
         <input
           type="color"
           value={settings.searchText || '#111827'}
@@ -401,24 +427,24 @@ function SearchTab({ settings, onSave }: { settings: Settings; onSave: (p: Parti
           className="h-8 w-14 cursor-pointer rounded border border-line bg-transparent"
         />
         <button className="btn" onClick={() => onSave({ searchText: '' })}>
-          跟随主题
+          {t('search.followTheme')}
         </button>
       </Row>
 
       <div className="mt-5 border-t border-line pt-4">
         <div className="mb-3 flex items-center">
-          <h3 className="text-[14px] font-medium">搜索引擎</h3>
+          <h3 className="text-[14px] font-medium">{t('search.engines')}</h3>
           <button
             className="btn ml-auto"
             onClick={() =>
               updateEngines([
                 ...engines,
-                { id: `e${Date.now()}`, name: '新引擎', url: 'https://example.com/search?q={q}', icon: 'mdi:magnify' },
+                { id: `e${Date.now()}`, name: t('search.newEngine'), url: 'https://example.com/search?q={q}', icon: 'mdi:magnify' },
               ])
             }
           >
-            <Icon icon="mdi:plus" size={16} title="添加" />
-            添加
+            <Icon icon="mdi:plus" size={16} title={t('common.add')} />
+            {t('search.newEngine')}
           </button>
         </div>
 
@@ -433,25 +459,25 @@ function SearchTab({ settings, onSave }: { settings: Settings; onSave: (p: Parti
               <input
                 className="field min-w-[220px] flex-1"
                 value={engine.url}
-                placeholder="https://…/search?q={q}"
+                placeholder={t('search.urlPlaceholder')}
                 onChange={(e) => updateEngines(engines.map((x, i) => (i === index ? { ...x, url: e.target.value } : x)))}
               />
               <input
                 className="field w-44"
                 value={engine.icon}
-                placeholder="mdi:magnify"
+                placeholder={t('search.iconPlaceholder')}
                 onChange={(e) => updateEngines(engines.map((x, i) => (i === index ? { ...x, icon: e.target.value } : x)))}
               />
               <button
                 className="btn btn-ghost text-red-500"
                 onClick={() => updateEngines(engines.filter((_, i) => i !== index))}
               >
-                <Icon icon="mdi:trash-can-outline" size={17} title="删除" />
+                <Icon icon="mdi:trash-can-outline" size={17} title={t('common.delete')} />
               </button>
             </div>
           ))}
         </div>
-        <p className="mt-2 text-[12px] text-muted">地址中用 {'{q}'} 表示关键词占位符。</p>
+        <p className="mt-2 text-[12px] text-muted">{t('search.qTip')}</p>
       </div>
     </div>
   );
@@ -460,18 +486,19 @@ function SearchTab({ settings, onSave }: { settings: Settings; onSave: (p: Parti
 /* ------------------------------ 自定义代码 ------------------------------ */
 
 function CustomTab({ settings, onSave }: { settings: Settings; onSave: (p: Partial<Settings>) => void }) {
+  const { t } = useI18n();
   return (
     <div className="space-y-5">
       <div>
         <div className="mb-1.5 flex items-center">
-          <h3 className="text-[14px] font-medium">自定义 CSS</h3>
+          <h3 className="text-[14px] font-medium">{t('custom.css')}</h3>
           <button className="btn ml-auto" onClick={() => onSave({ customCss: settings.customCss })}>
-            应用
+            {t('custom.apply')}
           </button>
         </div>
         <textarea
           className="field h-48 font-mono text-[12px]"
-          placeholder={'.card { border-radius: 20px; }'}
+          placeholder={t('custom.cssPlaceholder')}
           value={settings.customCss}
           onChange={(e) => onSave({ customCss: e.target.value })}
         />
@@ -479,20 +506,18 @@ function CustomTab({ settings, onSave }: { settings: Settings; onSave: (p: Parti
 
       <div>
         <div className="mb-1.5 flex items-center">
-          <h3 className="text-[14px] font-medium">自定义 JS</h3>
+          <h3 className="text-[14px] font-medium">{t('custom.js')}</h3>
           <button className="btn ml-auto" onClick={() => onSave({ customJs: settings.customJs })}>
-            应用
+            {t('custom.apply')}
           </button>
         </div>
         <textarea
           className="field h-48 font-mono text-[12px]"
-          placeholder={'console.log("hello");'}
+          placeholder={t('custom.jsPlaceholder')}
           value={settings.customJs}
           onChange={(e) => onSave({ customJs: e.target.value })}
         />
-        <p className="mt-2 text-[12px] text-muted">
-          自定义代码仅对当前配置文件生效，保存后刷新页面即可看到效果。
-        </p>
+        <p className="mt-2 text-[12px] text-muted">{t('custom.tip')}</p>
       </div>
     </div>
   );
@@ -513,6 +538,7 @@ function DataTab({
   settings: Settings;
   onSave: (p: Partial<Settings>) => void;
 }) {
+  const { t } = useI18n();
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const fileInput = useRef<HTMLInputElement>(null);
   const importInput = useRef<HTMLInputElement>(null);
@@ -534,10 +560,10 @@ function DataTab({
   const upload = async (file: File) => {
     try {
       const res = await api.uploadFile(file, as ?? undefined);
-      toast(res.dedup ? '文件已存在，已复用（节省空间）' : '上传成功');
+      toast(res.dedup ? t('data.deduped') : t('data.uploaded'));
       await loadFiles();
     } catch {
-      toast('上传失败');
+      toast(t('common.uploadFailed'));
     }
   };
 
@@ -546,32 +572,32 @@ function DataTab({
       const text = await file.text();
       const payload = JSON.parse(text);
       const res = await api.importData(payload, mode, as ?? undefined);
-      toast(`导入成功：${res.groupCount} 个分组 / ${res.itemCount} 个站点`);
+      toast(t('data.imported', { g: res.groupCount, i: res.itemCount }));
     } catch {
-      toast('导入失败：文件格式不正确');
+      toast(t('data.importFailed'));
     }
   };
 
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="mb-2 text-[14px] font-medium">备份与导入</h3>
+        <h3 className="mb-2 text-[14px] font-medium">{t('data.backup')}</h3>
         <div className="flex flex-wrap gap-2">
           <a className="btn" href={`/api/export${query}`} download>
-            <Icon icon="mdi:export" size={17} title="导出" />
-            导出配置
+            <Icon icon="mdi:export" size={17} title={t('data.export')} />
+            {t('data.export')}
           </a>
           <button className="btn" onClick={() => importInput.current?.click()}>
-            <Icon icon="mdi:import" size={17} title="导入" />
-            导入（合并）
+            <Icon icon="mdi:import" size={17} title={t('data.importMerge')} />
+            {t('data.importMerge')}
           </button>
           <button
             className="btn"
             onClick={() => {
-              if (confirm('导入将清空当前分组后重建，确定继续？')) importInput.current?.click();
+              if (confirm(t('data.importConfirm'))) importInput.current?.click();
             }}
           >
-            导入（覆盖）
+            {t('data.importReplace')}
           </button>
         </div>
         <input
@@ -585,15 +611,15 @@ function DataTab({
             e.target.value = '';
           }}
         />
-        <p className="mt-2 text-[12px] text-muted">导出内容为 JSON，可用于迁移或分享给他人。</p>
+        <p className="mt-2 text-[12px] text-muted">{t('data.tip')}</p>
       </div>
 
       <div className="border-t border-line pt-5">
         <div className="mb-2 flex items-center">
-          <h3 className="text-[14px] font-medium">文件管理</h3>
+          <h3 className="text-[14px] font-medium">{t('data.files')}</h3>
           <button className="btn ml-auto" onClick={() => fileInput.current?.click()}>
-            <Icon icon="mdi:upload" size={17} title="上传" />
-            上传文件
+            <Icon icon="mdi:upload" size={17} title={t('data.upload')} />
+            {t('data.upload')}
           </button>
         </div>
         <input
@@ -606,40 +632,38 @@ function DataTab({
             e.target.value = '';
           }}
         />
-        <p className="mb-3 text-[12px] text-muted">
-          相同内容的文件只保存一份（按内容哈希去重），重复上传不会占用额外空间。
-        </p>
+        <p className="mb-3 text-[12px] text-muted">{t('data.fileTip')}</p>
 
         {files.length === 0 ? (
-          <p className="py-4 text-center text-[13px] text-muted">暂无上传文件</p>
+          <p className="py-4 text-center text-[13px] text-muted">{t('data.noFiles')}</p>
         ) : (
           <div className="space-y-2">
             {files.map((f) => {
               const url = `${location.origin}/api/files/${f.path}`;
               return (
                 <div key={f.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-line p-2 text-[13px]">
-                  <Icon icon="mdi:file-outline" size={18} title="文件" />
+                  <Icon icon="mdi:file-outline" size={18} title={t('common.file')} />
                   <span className="max-w-[220px] truncate">{f.name}</span>
                   <span className="text-[12px] text-muted">{(f.size / 1024).toFixed(1)} KB</span>
-                  {f.refCount > 1 ? <span className="chip">复用 {f.refCount} 次</span> : null}
+                  {f.refCount > 1 ? <span className="chip">{t('data.reused', { n: f.refCount })}</span> : null}
                   <button
                     className="btn btn-ghost ml-auto"
                     onClick={() => {
                       void navigator.clipboard.writeText(url);
-                      toast('链接已复制');
+                      toast(t('data.linkCopied'));
                     }}
                   >
-                    复制链接
+                    {t('data.copyLink')}
                   </button>
                   <button
                     className="btn btn-ghost text-red-500"
                     onClick={async () => {
                       await api.deleteFile(f.id, as ?? undefined);
                       await loadFiles();
-                      toast('已删除');
+                      toast(t('common.deleted'));
                     }}
                   >
-                    <Icon icon="mdi:trash-can-outline" size={17} title="删除" />
+                    <Icon icon="mdi:trash-can-outline" size={17} title={t('common.delete')} />
                   </button>
                 </div>
               );
@@ -649,19 +673,18 @@ function DataTab({
       </div>
 
       <div className="border-t border-line pt-5">
-        <h3 className="mb-2 text-[14px] font-medium">恢复默认</h3>
+        <h3 className="mb-2 text-[14px] font-medium">{t('data.reset')}</h3>
         <button
           className="btn btn-danger"
           onClick={async () => {
-            if (!confirm('确定恢复当前配置的默认值？')) return;
-            const url = new URL(window.location.href);
+            if (!confirm(t('data.resetConfirm'))) return;
             await fetch(`/api/settings/reset${as ? `?as=${as}` : ''}`, { method: 'POST' });
             window.location.reload();
           }}
         >
-          恢复默认设置
+          {t('data.reset')}
         </button>
-        <p className="mt-2 text-[12px] text-muted">仅重置外观与功能开关，不会删除分组和站点。</p>
+        <p className="mt-2 text-[12px] text-muted">{t('data.resetTip')}</p>
       </div>
     </div>
   );
@@ -680,6 +703,7 @@ function UsersTab({
   current: User;
   toast: (msg: string) => void;
 }) {
+  const { t } = useI18n();
   const [form, setForm] = useState({ username: '', password: '', role: 'user' as Role });
   const [editPw, setEditPw] = useState<{ id: number; password: string } | null>(null);
 
@@ -688,18 +712,18 @@ function UsersTab({
   return (
     <div className="space-y-5">
       <div>
-        <h3 className="mb-2 text-[14px] font-medium">新增账号</h3>
+        <h3 className="mb-2 text-[14px] font-medium">{t('users.add')}</h3>
         <div className="flex flex-wrap gap-2">
           <input
             className="field w-40"
-            placeholder="用户名"
+            placeholder={t('users.username')}
             value={form.username}
             onChange={(e) => setForm({ ...form, username: e.target.value })}
           />
           <input
             className="field w-40"
             type="password"
-            placeholder="密码至少 6 位"
+            placeholder={t('users.password')}
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
           />
@@ -708,8 +732,8 @@ function UsersTab({
             value={form.role}
             onChange={(e) => setForm({ ...form, role: e.target.value as Role })}
           >
-            <option value="user">普通用户</option>
-            <option value="admin">管理员</option>
+            <option value="user">{t('users.roleUser')}</option>
+            <option value="admin">{t('users.roleAdmin')}</option>
           </select>
           <button
             className="btn btn-primary"
@@ -718,46 +742,46 @@ function UsersTab({
                 await api.createUser(form.username, form.password, form.role);
                 setForm({ username: '', password: '', role: 'user' });
                 await reload();
-                toast('已创建');
+                toast(t('users.created'));
               } catch (err) {
-                toast(err instanceof Error ? err.message : '创建失败');
+                toast(err instanceof Error ? err.message : t('common.createFailed'));
               }
             }}
           >
-            创建
+            {t('users.create')}
           </button>
         </div>
       </div>
 
       <div className="border-t border-line pt-4">
-        <h3 className="mb-2 text-[14px] font-medium">账号列表</h3>
+        <h3 className="mb-2 text-[14px] font-medium">{t('users.list')}</h3>
         <div className="space-y-2">
           {users.map((u) => (
             <div key={u.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-line p-2 text-[13px]">
               <Icon icon="mdi:account-outline" size={18} title={u.username} />
               <span>{u.username}</span>
               <span className="chip">
-                {u.role === 'admin' ? '管理员' : u.role === 'guest' ? '访客' : '用户'}
+                {u.role === 'admin' ? t('home.roleAdmin') : u.role === 'guest' ? t('home.roleGuest') : t('home.roleUser')}
               </span>
-              {u.id === current.id ? <span className="chip">当前登录</span> : null}
+              {u.id === current.id ? <span className="chip">{t('home.currentLogin')}</span> : null}
 
               <div className="ml-auto flex gap-1">
                 {u.role !== 'guest' ? (
                   <button className="btn btn-ghost" onClick={() => setEditPw({ id: u.id, password: '' })}>
-                    重置密码
+                    {t('users.resetPassword')}
                   </button>
                 ) : null}
                 {u.role !== 'guest' && u.id !== current.id ? (
                   <button
                     className="btn btn-ghost text-red-500"
                     onClick={async () => {
-                      if (!confirm(`删除账号 ${u.username}？其分组与站点也会一并删除。`)) return;
+                      if (!confirm(t('users.deleteConfirm', { name: u.username }))) return;
                       await api.deleteUser(u.id);
                       await reload();
-                      toast('已删除');
+                      toast(t('common.deleted'));
                     }}
                   >
-                    删除
+                    {t('common.delete')}
                   </button>
                 ) : null}
               </div>
@@ -769,17 +793,17 @@ function UsersTab({
       {editPw ? (
         <div className="modal-backdrop" onClick={() => setEditPw(null)}>
           <div className="modal max-w-sm" onClick={(e) => e.stopPropagation()}>
-            <h3 className="mb-3 text-[15px] font-medium">重置密码</h3>
+            <h3 className="mb-3 text-[15px] font-medium">{t('users.resetPassword')}</h3>
             <input
               className="field"
               type="password"
-              placeholder="新密码（至少 6 位）"
+              placeholder={t('dialog.password.new')}
               value={editPw.password}
               onChange={(e) => setEditPw({ ...editPw, password: e.target.value })}
             />
             <div className="mt-4 flex justify-end gap-2">
               <button className="btn" onClick={() => setEditPw(null)}>
-                取消
+                {t('common.cancel')}
               </button>
               <button
                 className="btn btn-primary"
@@ -787,13 +811,13 @@ function UsersTab({
                   try {
                     await api.updateUser(editPw.id, { password: editPw.password });
                     setEditPw(null);
-                    toast('密码已重置');
+                    toast(t('users.passwordReset'));
                   } catch (err) {
-                    toast(err instanceof Error ? err.message : '失败');
+                    toast(err instanceof Error ? err.message : t('common.operationFailed'));
                   }
                 }}
               >
-                保存
+                {t('common.save')}
               </button>
             </div>
           </div>
@@ -805,13 +829,13 @@ function UsersTab({
 
 /* ------------------------------ 系统状态 ------------------------------ */
 
-function fmtDuration(s: number): string {
+function fmtDuration(s: number, t: (k: string, p?: Record<string, string | number>) => string): string {
   const d = Math.floor(s / 86400);
   const h = Math.floor((s % 86400) / 3600);
   const m = Math.floor((s % 3600) / 60);
-  if (d) return `${d} 天 ${h} 小时`;
-  if (h) return `${h} 小时 ${m} 分钟`;
-  return `${m} 分 ${s % 60} 秒`;
+  if (d) return `${d} ${t('common.day')} ${h} ${t('common.hour')}`;
+  if (h) return `${h} ${t('common.hour')} ${m} ${t('common.minute')}`;
+  return `${m} ${t('common.minute')}`;
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
@@ -841,6 +865,7 @@ function Bar({ value, max, label, hint }: { value: number; max: number; label: s
 }
 
 function StatusTab() {
+  const { t } = useI18n();
   const [data, setData] = useState<SystemStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -849,9 +874,9 @@ function StatusTab() {
       setData(await api.system());
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : '读取失败');
+      setError(e instanceof Error ? e.message : t('common.loadFailed'));
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
@@ -860,81 +885,79 @@ function StatusTab() {
   }, [load]);
 
   if (error) return <p className="py-6 text-center text-[13px] text-red-500">{error}</p>;
-  if (!data) return <p className="py-6 text-center text-[13px] text-muted">加载中…</p>;
+  if (!data) return <p className="py-6 text-center text-[13px] text-muted">{t('common.loading')}</p>;
 
   const usedMem = +(data.host.totalMemGb - data.host.freeMemGb).toFixed(1);
 
   return (
     <div>
       <div className="mb-4 flex items-center">
-        <h3 className="text-[14px] font-medium">系统状态</h3>
-        <span className="chip ml-2">每 10 秒刷新</span>
+        <h3 className="text-[14px] font-medium">{t('status.title')}</h3>
+        <span className="chip ml-2">{t('status.autoRefresh')}</span>
         <button className="btn ml-auto" onClick={() => void load()}>
-          <Icon icon="mdi:refresh" size={16} title="刷新" />
-          刷新
+          <Icon icon="mdi:refresh" size={16} title={t('common.refresh')} />
+          {t('common.refresh')}
         </button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-xl border border-line p-4">
           <div className="mb-2 flex items-center gap-1.5 text-[13px] font-medium">
-            <Icon icon="mdi:server-outline" size={17} title="服务" />
-            面板服务
+            <Icon icon="mdi:server-outline" size={17} title={t('status.service')} />
+            {t('status.service')}
           </div>
-          <Stat label="版本" value={`v${data.version}`} />
-          <Stat label="运行时长" value={fmtDuration(data.service.uptime)} />
-          <Stat label="进程 PID" value={String(data.service.pid)} />
-          <Stat label="Node 版本" value={data.service.nodeVersion} />
-          <Stat label="内存占用" value={`${data.service.rssMb} MB`} />
-          <Stat label="堆内存" value={`${data.service.heapUsedMb} MB`} />
+          <Stat label={t('status.version')} value={`v${data.version}`} />
+          <Stat label={t('status.uptime')} value={fmtDuration(data.service.uptime, t)} />
+          <Stat label={t('status.pid')} value={String(data.service.pid)} />
+          <Stat label={t('status.node')} value={data.service.nodeVersion} />
+          <Stat label={t('status.memory')} value={`${data.service.rssMb} MB`} />
+          <Stat label={t('status.heap')} value={`${data.service.heapUsedMb} MB`} />
         </div>
 
         <div className="rounded-xl border border-line p-4">
           <div className="mb-2 flex items-center gap-1.5 text-[13px] font-medium">
-            <Icon icon="mdi:chip" size={17} title="主机" />
-            主机
+            <Icon icon="mdi:chip" size={17} title={t('status.host')} />
+            {t('status.host')}
           </div>
-          <Stat label="主机名" value={data.host.hostname} />
-          <Stat label="系统" value={`${data.host.platform} · ${data.host.arch}`} />
-          <Stat label="CPU" value={`${data.host.cpuCount} 核`} />
-          <Stat label="CPU 型号" value={data.host.cpuModel} />
-          <Stat label="负载" value={data.host.loadAvg.join(' / ')} />
-          <Stat label="开机时长" value={fmtDuration(data.host.osUptime)} />
+          <Stat label={t('status.hostname')} value={data.host.hostname} />
+          <Stat label={t('status.os')} value={`${data.host.platform} · ${data.host.arch}`} />
+          <Stat label={t('status.cpu')} value={t('status.cpuCores', { n: data.host.cpuCount })} />
+          <Stat label={t('status.cpuModel')} value={data.host.cpuModel} />
+          <Stat label={t('status.load')} value={data.host.loadAvg.join(' / ')} />
+          <Stat label={t('status.osUptime')} value={fmtDuration(data.host.osUptime, t)} />
           <Bar
             value={usedMem}
             max={data.host.totalMemGb}
-            label="内存使用"
+            label={t('status.memUsage')}
             hint={`${usedMem} / ${data.host.totalMemGb} GB`}
           />
         </div>
 
         <div className="rounded-xl border border-line p-4">
           <div className="mb-2 flex items-center gap-1.5 text-[13px] font-medium">
-            <Icon icon="mdi:database-outline" size={17} title="数据" />
-            数据
+            <Icon icon="mdi:database-outline" size={17} title={t('status.data')} />
+            {t('status.data')}
           </div>
-          <Stat label="分组" value={`${data.data.groups} 个`} />
-          <Stat label="站点" value={`${data.data.items} 个`} />
-          <Stat label="上传文件" value={`${data.data.files} 个`} />
-          <Stat label="账号" value={`${data.data.users} 个`} />
-          <Stat label="数据库" value={`${data.data.dbSizeMb} MB`} />
-          <Stat label="数据目录" value={data.data.dataDir} />
+          <Stat label={t('status.groups')} value={t('status.count', { n: data.data.groups })} />
+          <Stat label={t('status.items')} value={t('status.count', { n: data.data.items })} />
+          <Stat label={t('status.files')} value={t('status.count', { n: data.data.files })} />
+          <Stat label={t('status.accounts')} value={t('status.count', { n: data.data.users })} />
+          <Stat label={t('status.database')} value={`${data.data.dbSizeMb} MB`} />
+          <Stat label={t('status.dataDir')} value={data.data.dataDir} />
         </div>
 
         <div className="rounded-xl border border-line p-4">
           <div className="mb-2 flex items-center gap-1.5 text-[13px] font-medium">
-            <Icon icon="mdi:console" size={17} title="运维" />
-            运维命令
+            <Icon icon="mdi:console" size={17} title={t('status.ops')} />
+            {t('status.ops')}
           </div>
           <div className="space-y-1.5 font-mono text-[12px] text-muted">
-            <div>sh scripts/start.sh　启动</div>
-            <div>sh scripts/stop.sh　　停止</div>
-            <div>sh scripts/update.sh　更新重启</div>
-            <div>sh scripts/address.sh 查看地址</div>
+            <div>sh scripts/start.sh　{t('common.start')}</div>
+            <div>sh scripts/stop.sh　{t('common.stop')}</div>
+            <div>sh scripts/update.sh　{t('common.update')}</div>
+            <div>sh scripts/address.sh　{t('status.address')}</div>
           </div>
-          <p className="mt-2 text-[12px] text-muted">
-            日志：项目目录 logs/navideck.log
-          </p>
+          <p className="mt-2 text-[12px] text-muted">{t('status.logFile')}</p>
         </div>
       </div>
     </div>
@@ -944,17 +967,16 @@ function StatusTab() {
 /* ------------------------------ 关于 ------------------------------ */
 
 function AboutTab() {
+  const { t } = useI18n();
   return (
     <div className="space-y-3 text-[13px] leading-relaxed">
-      <p className="font-medium">NAS 导航面板 v0.1.0</p>
-      <p className="text-muted">
-        轻量自托管导航页，支持多账号隔离、内外网切换、Iconify 图标、拖拽排序、自定义代码与内置小窗口打开。
-      </p>
+      <p className="font-medium">{t('about.version', { version: '0.1.0' })}</p>
+      <p className="text-muted">{t('about.desc')}</p>
       <ul className="list-inside list-disc space-y-1 text-muted">
-        <li>数据存储：SQLite 单文件，无需外部数据库</li>
-        <li>部署：Docker 镜像支持 amd64 / arm64</li>
-        <li>图标：Iconify（20 万+），离线时自动降级为首字占位</li>
-        <li>后续版本：Docker 容器管理、系统监控小组件、多语言</li>
+        <li>{t('about.featureStorage')}</li>
+        <li>{t('about.featureDeploy')}</li>
+        <li>{t('about.featureIcon')}</li>
+        <li>{t('about.featureNext')}</li>
       </ul>
     </div>
   );

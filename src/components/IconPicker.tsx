@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon, ICONIFY_API, iconUrl } from './Icon';
+import { useI18n } from '@/i18n';
 
 const PRESETS = [
   'mdi:home-outline',
@@ -53,7 +54,8 @@ interface Props {
   label?: string;
 }
 
-export function IconPicker({ value, onChange, label = '图标' }: Props) {
+export function IconPicker({ value, onChange, label }: Props) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<string[]>([]);
@@ -92,25 +94,25 @@ export function IconPicker({ value, onChange, label = '图标' }: Props) {
 
   return (
     <div>
-      <div className="mb-1.5 block text-[13px] text-muted">{label}</div>
+      <div className="mb-1.5 block text-[13px] text-muted">{label ?? t('dialog.item.icon')}</div>
       <button type="button" className="btn w-full justify-start" onClick={() => setOpen(true)}>
         <Icon icon={value} size={22} title={value || '图'} />
-        <span className="truncate">{value || '点击选择图标'}</span>
+        <span className="truncate">{value || t('dialog.icon.clickToSelect')}</span>
       </button>
 
       {open ? (
         <div className="modal-backdrop" onClick={() => setOpen(false)}>
           <div className="modal max-w-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-[15px] font-medium">选择图标</h3>
+              <h3 className="text-[15px] font-medium">{t('dialog.icon.title')}</h3>
               <button className="btn btn-ghost" onClick={() => setOpen(false)}>
-                关闭
+                {t('common.close')}
               </button>
             </div>
 
             <input
               className="field mb-2"
-              placeholder="搜索图标，如 home / docker / nas"
+              placeholder={t('dialog.icon.search')}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               autoFocus
@@ -118,7 +120,7 @@ export function IconPicker({ value, onChange, label = '图标' }: Props) {
             <div className="mb-3 flex gap-2">
               <input
                 className="field"
-                placeholder="或直接填写 iconify 名称，如 mdi:server"
+                placeholder={t('dialog.icon.custom')}
                 value={custom}
                 onChange={(e) => setCustom(e.target.value)}
               />
@@ -131,11 +133,11 @@ export function IconPicker({ value, onChange, label = '图标' }: Props) {
                   }
                 }}
               >
-                使用
+                {t('dialog.icon.use')}
               </button>
             </div>
 
-            {loading ? <p className="py-6 text-center text-[13px] text-muted">搜索中…</p> : null}
+            {loading ? <p className="py-6 text-center text-[13px] text-muted">{t('dialog.icon.searching')}</p> : null}
 
             <div className="grid grid-cols-6 gap-2 sm:grid-cols-8">
               {list.map((name) => (
@@ -154,9 +156,7 @@ export function IconPicker({ value, onChange, label = '图标' }: Props) {
                 </button>
               ))}
             </div>
-            <p className="mt-3 text-[12px] text-muted">
-              图标来自 Iconify，共 20 万+ 图标；离线环境可用首字占位。
-            </p>
+            <p className="mt-3 text-[12px] text-muted">{t('dialog.icon.tip')}</p>
           </div>
         </div>
       ) : null}

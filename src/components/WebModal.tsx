@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Icon } from './Icon';
+import { useI18n } from '@/i18n';
 
 interface Props {
   url: string | null;
@@ -11,6 +12,7 @@ interface Props {
 
 /** 内置小窗口：用于 iframe 打开三方站点（部分站点会因 X-Frame-Options 拒绝嵌入） */
 export function WebModal({ url, title, onClose }: Props) {
+  const { t } = useI18n();
   const [blocked, setBlocked] = useState(false);
 
   useEffect(() => {
@@ -32,22 +34,22 @@ export function WebModal({ url, title, onClose }: Props) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-none items-center gap-2 border-b border-line px-4 py-2.5">
-          <Icon icon="mdi:web" size={20} title={title || '网页'} />
-          <span className="truncate text-[14px] font-medium">{title || '网页'}</span>
+          <Icon icon="mdi:web" size={20} title={title || t('modal.web')} />
+          <span className="truncate text-[14px] font-medium">{title || t('modal.web')}</span>
           <span className="ml-2 hidden truncate text-[12px] text-muted sm:block">{url}</span>
           <div className="ml-auto flex items-center gap-1">
             <button
               className="btn btn-ghost"
-              title="在新标签页打开"
+              title={t('modal.openNew')}
               onClick={() => window.open(url, '_blank', 'noopener')}
             >
-              <Icon icon="mdi:open-in-new" size={18} title="新窗口" />
+              <Icon icon="mdi:open-in-new" size={18} title={t('modal.openNew')} />
             </button>
-            <button className="btn btn-ghost" title="刷新" onClick={() => setBlocked((v) => !v)}>
-              <Icon icon="mdi:refresh" size={18} title="刷新" />
+            <button className="btn btn-ghost" title={t('common.refresh')} onClick={() => setBlocked((v) => !v)}>
+              <Icon icon="mdi:refresh" size={18} title={t('common.refresh')} />
             </button>
-            <button className="btn btn-ghost" onClick={onClose} title="关闭">
-              <Icon icon="mdi:close" size={20} title="关闭" />
+            <button className="btn btn-ghost" onClick={onClose} title={t('common.close')}>
+              <Icon icon="mdi:close" size={20} title={t('common.close')} />
             </button>
           </div>
         </div>
@@ -56,9 +58,9 @@ export function WebModal({ url, title, onClose }: Props) {
           {blocked ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
               <Icon icon="mdi:shield-alert-outline" size={40} title="!" />
-              <p className="text-[14px]">该站点拒绝被嵌入（X-Frame-Options / CSP 限制）</p>
+              <p className="text-[14px]">{t('modal.blocked')}</p>
               <button className="btn btn-primary" onClick={() => window.open(url, '_blank', 'noopener')}>
-                在新标签页打开
+                {t('modal.openNew')}
               </button>
             </div>
           ) : (
@@ -83,9 +85,7 @@ export function WebModal({ url, title, onClose }: Props) {
         </div>
 
         {!blocked ? (
-          <div className="flex-none border-t border-line px-4 py-2 text-[12px] text-muted">
-            若页面空白，说明该站点禁止嵌入，请点右上角在新标签页打开。
-          </div>
+          <div className="flex-none border-t border-line px-4 py-2 text-[12px] text-muted">{t('modal.blockedTip')}</div>
         ) : null}
       </div>
     </div>

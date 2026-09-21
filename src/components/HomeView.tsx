@@ -10,6 +10,7 @@ import { WebModal } from './WebModal';
 import { Widgets } from './Widgets';
 import { ConfirmDialog, emptyItemDraft, GroupDialog, ItemDialog, itemToDraft, type ItemDraft } from './Dialogs';
 import type { Group, Item, NetMode, Settings, ThemeMode, User } from '@/lib/types';
+import { useI18n } from '@/i18n';
 
 interface Props {
   user: User | null;
@@ -29,6 +30,7 @@ export function HomeView({
   users = [],
 }: Props) {
   const router = useRouter();
+  const { t } = useI18n();
   const [groups, setGroups] = useState<GroupWithItems[]>(initialGroups);
   const [settings, setSettings] = useState<Settings>(initialSettings);
   const [netMode, setNetMode] = useState<NetMode>(initialSettings.netMode);
@@ -45,8 +47,8 @@ export function HomeView({
 
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 2400);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setToast(null), 2400);
+    return () => clearTimeout(timer);
   }, [toast]);
 
   useEffect(() => {
@@ -76,7 +78,7 @@ export function HomeView({
     try {
       setGroups(await api.groups(effectiveId));
     } catch {
-      setToast('加载失败');
+      setToast(t('common.loadFailed'));
     }
   }, [effectiveId]);
 
@@ -86,7 +88,7 @@ export function HomeView({
     try {
       setGroups(await api.groups(id ?? undefined));
     } catch {
-      setToast('切换失败');
+      setToast(t('common.switchFailed'));
     }
   };
 
@@ -111,7 +113,7 @@ export function HomeView({
           }
         }
       } catch (err) {
-        setToast(err instanceof Error ? err.message : '保存排序失败');
+        setToast(err instanceof Error ? err.message : t('common.saveOrderFailed'));
         await refresh();
       }
     },
@@ -121,7 +123,7 @@ export function HomeView({
   const openItem = (item: Item) => {
     const url = netMode === 'wan' ? item.urlWan || item.urlLan : item.urlLan || item.urlWan;
     if (!url) {
-      setToast('该站点未配置链接');
+      setToast(t('home.noLink'));
       return;
     }
     if (item.openMode === 'modal') {
@@ -154,9 +156,9 @@ export function HomeView({
       }
       setPending(null);
       await refresh();
-      setToast('已保存');
+      setToast(t('common.saved'));
     } catch (err) {
-      setToast(err instanceof Error ? err.message : '保存失败');
+      setToast(err instanceof Error ? err.message : t('common.saveFailed'));
     }
   };
 
@@ -166,9 +168,9 @@ export function HomeView({
       else await api.createGroup(draft.name, draft.icon, targetId ?? undefined);
       setPending(null);
       await refresh();
-      setToast('已保存');
+      setToast(t('common.saved'));
     } catch (err) {
-      setToast(err instanceof Error ? err.message : '保存失败');
+      setToast(err instanceof Error ? err.message : t('common.saveFailed'));
     }
   };
 
@@ -183,13 +185,13 @@ export function HomeView({
               className={`rounded-lg px-3 py-1 transition ${netMode === 'lan' ? 'bg-brand text-white' : 'text-muted'}`}
               onClick={() => switchNet('lan')}
             >
-              内网
+              {t('net.lan')}
             </button>
             <button
               className={`rounded-lg px-3 py-1 transition ${netMode === 'wan' ? 'bg-brand text-white' : 'text-muted'}`}
               onClick={() => switchNet('wan')}
             >
-              外网
+              {t('net.wan')}
             </button>
           </div>
 
@@ -197,28 +199,28 @@ export function HomeView({
             <button
               className={`btn ${editMode ? 'btn-primary' : ''}`}
               onClick={() => setEditMode((v) => !v)}
-              title="编辑模式"
+              title={t('home.editMode')}
             >
-              <Icon icon={editMode ? 'mdi:check' : 'mdi:pencil-outline'} size={17} title="编辑" />
-              <span className="hidden sm:inline">{editMode ? '完成' : '编辑'}</span>
+              <Icon icon={editMode ? 'mdi:check' : 'mdi:pencil-outline'} size={17} title={t('home.editMode')} />
+              <span className="hidden sm:inline">{editMode ? t('home.editDone') : t('home.editMode')}</span>
             </button>
           ) : null}
 
-          <button className="btn btn-ghost" onClick={cycleTheme} title="主题：自动 / 亮色 / 暗色">
+          <button className="btn btn-ghost" onClick={cycleTheme} title={t('home.themeTip')}>
             <Icon
               icon={theme === 'dark' ? 'mdi:weather-night' : theme === 'light' ? 'mdi:white-balance-sunny' : 'mdi:theme-light-dark'}
               size={18}
-              title="主题"
+              title={t('common.theme')}
             />
           </button>
 
-          <button className="btn btn-ghost" onClick={() => router.push('/settings')} title="设置">
-            <Icon icon="mdi:cog-outline" size={19} title="设置" />
+          <button className="btn btn-ghost" onClick={() => router.push('/settings')} title={t('home.settings')}>
+            <Icon icon="mdi:cog-outline" size={19} title={t('home.settings')} />
           </button>
 
           <div className="relative">
-            <button className="btn btn-ghost" onClick={() => setMenuOpen((v) => !v)} title="账号">
-              <Icon icon={user ? 'mdi:account-circle-outline' : 'mdi:login'} size={20} title="账号" />
+            <button className="btn btn-ghost" onClick={() => setMenuOpen((v) => !v)} title={t('home.account')}>
+              <Icon icon={user ? 'mdi:account-circle-outline' : 'mdi:login'} size={20} title={t('home.account')} />
             </button>
             {menuOpen ? (
               <div
@@ -230,7 +232,7 @@ export function HomeView({
                     <div className="px-2 py-1.5 text-[12px] text-muted">
                       {user.username}
                       <span className="ml-1 rounded bg-brand/15 px-1.5 py-0.5 text-[11px] text-brand">
-                        {user.role === 'admin' ? '管理员' : user.role === 'guest' ? '访客' : '用户'}
+                        {user.role === 'admin' ? t('home.roleAdmin') : user.role === 'guest' ? t('home.roleGuest') : t('home.roleUser')}
                       </span>
                     </div>
                     <button
@@ -240,7 +242,7 @@ export function HomeView({
                         setPwForm({ oldPassword: '', newPassword: '' });
                       }}
                     >
-                      修改密码
+                      {t('home.changePassword')}
                     </button>
                     <button
                       className="w-full rounded-lg px-2 py-1.5 text-left text-[13px] hover:bg-brand/10"
@@ -249,7 +251,7 @@ export function HomeView({
                         router.push('/settings');
                       }}
                     >
-                      设置中心
+                      {t('home.settingsCenter')}
                     </button>
                     <button
                       className="w-full rounded-lg px-2 py-1.5 text-left text-[13px] text-red-500 hover:bg-red-500/10"
@@ -260,7 +262,7 @@ export function HomeView({
                         window.location.reload();
                       }}
                     >
-                      退出登录
+                      {t('common.logout')}
                     </button>
                   </>
                 ) : (
@@ -268,7 +270,7 @@ export function HomeView({
                     className="w-full rounded-lg px-2 py-1.5 text-left text-[13px] hover:bg-brand/10"
                     onClick={() => router.push('/login')}
                   >
-                    登录
+                    {t('common.login')}
                   </button>
                 )}
               </div>
@@ -289,19 +291,19 @@ export function HomeView({
 
       {editMode && user ? (
         <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-brand/50 bg-brand/5 px-3 py-2 text-[13px]">
-          <Icon icon="mdi:information-outline" size={17} title="提示" />
-          编辑模式：可直接拖动卡片与分组排序，点击卡片上的铅笔修改，加号新增。
+          <Icon icon="mdi:information-outline" size={17} title={t('common.hint')} />
+          {t('home.editHint')}
           {isAdmin && users.length ? (
             <select
               className="field ml-auto w-auto"
               value={targetId === null ? 'self' : String(targetId)}
               onChange={(e) => switchTarget(e.target.value)}
-              title="选择要编辑的账号内容"
+              title={t('home.editTargetHint')}
             >
-              <option value="self">编辑：我的导航</option>
+              <option value="self">{t('home.editTarget')}</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
-                  编辑：{u.role === 'guest' ? '访客账号' : u.username}
+                  {u.role === 'guest' ? t('home.editGuest') : t('home.editTargetUser', { name: u.username })}
                 </option>
               ))}
             </select>
@@ -310,32 +312,32 @@ export function HomeView({
             className={isAdmin && users.length ? 'btn' : 'btn ml-auto'}
             onClick={() => setPending({ kind: 'group', draft: { name: '', icon: 'mdi:folder-outline' } })}
           >
-            <Icon icon="mdi:folder-plus-outline" size={17} title="分组" />
-            新增分组
+            <Icon icon="mdi:folder-plus-outline" size={17} title={t('common.group')} />
+            {t('home.newGroup')}
           </button>
         </div>
       ) : null}
 
       {isGuestView ? (
         <div className="mb-4 rounded-xl border border-line bg-surface/60 px-3 py-2 text-[13px] text-muted">
-          当前为访客浏览（只读）
+          {t('home.guestView')}
         </div>
       ) : null}
 
       {groups.length === 0 ? (
         <div className="card flex flex-col items-center justify-center gap-3 py-20 text-center">
-          <Icon icon="mdi:view-grid-plus-outline" size={44} title="空" />
-          <p className="text-[14px] text-muted">还没有任何分组</p>
+          <Icon icon="mdi:view-grid-plus-outline" size={44} title={t('common.empty')} />
+          <p className="text-[14px] text-muted">{t('home.emptyTitle')}</p>
           {user ? (
             <button
               className="btn btn-primary"
               onClick={() => setPending({ kind: 'group', draft: { name: '常用服务', icon: 'mdi:star-outline' } })}
             >
-              创建第一个分组
+              {t('home.firstGroup')}
             </button>
           ) : (
             <button className="btn btn-primary" onClick={() => router.push('/login')}>
-              登录后可自定义
+              {t('home.emptyGuest')}
             </button>
           )}
         </div>
@@ -394,7 +396,7 @@ export function HomeView({
 
       {confirmDelete ? (
         <ConfirmDialog
-          message={`确定删除「${confirmDelete.name}」吗？此操作不可恢复。`}
+          message={t('dialog.deleteConfirm', { name: confirmDelete.name })}
           onClose={() => setConfirmDelete(null)}
           onConfirm={async () => {
             try {
@@ -403,9 +405,9 @@ export function HomeView({
               setConfirmDelete(null);
               setPending(null);
               await refresh();
-              setToast('已删除');
+              setToast(t('common.deleted'));
             } catch (err) {
-              setToast(err instanceof Error ? err.message : '删除失败');
+              setToast(err instanceof Error ? err.message : t('common.deleteFailed'));
             }
           }}
         />
@@ -414,26 +416,26 @@ export function HomeView({
       {pwForm ? (
         <div className="modal-backdrop" onClick={() => setPwForm(null)}>
           <div className="modal max-w-sm" onClick={(e) => e.stopPropagation()}>
-            <h3 className="mb-4 text-[15px] font-medium">修改密码</h3>
+            <h3 className="mb-4 text-[15px] font-medium">{t('dialog.password.title')}</h3>
             <div className="space-y-3">
               <input
                 className="field"
                 type="password"
-                placeholder="当前密码"
+                placeholder={t('dialog.password.old')}
                 value={pwForm.oldPassword}
                 onChange={(e) => setPwForm({ ...pwForm, oldPassword: e.target.value })}
               />
               <input
                 className="field"
                 type="password"
-                placeholder="新密码（至少 6 位）"
+                placeholder={t('dialog.password.new')}
                 value={pwForm.newPassword}
                 onChange={(e) => setPwForm({ ...pwForm, newPassword: e.target.value })}
               />
             </div>
             <div className="mt-5 flex justify-end gap-2">
               <button className="btn" onClick={() => setPwForm(null)}>
-                取消
+                {t('common.cancel')}
               </button>
               <button
                 className="btn btn-primary"
@@ -441,13 +443,13 @@ export function HomeView({
                   try {
                     await api.changePassword(pwForm.oldPassword, pwForm.newPassword);
                     setPwForm(null);
-                    setToast('密码已更新');
+                    setToast(t('common.passwordUpdated'));
                   } catch (err) {
-                    setToast(err instanceof Error ? err.message : '修改失败');
+                    setToast(err instanceof Error ? err.message : t('common.updateFailed'));
                   }
                 }}
               >
-                保存
+                {t('common.save')}
               </button>
             </div>
           </div>

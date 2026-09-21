@@ -5,8 +5,8 @@ import { getGlobalSettings, getUserByName, getUserSettings } from '@/lib/db';
 import { ensureBootstrap } from '@/lib/bootstrap';
 
 export const metadata: Metadata = {
-  title: '导航面板',
-  description: '轻量 NAS / 服务器导航面板',
+  title: 'NaviDeck',
+  description: 'Lightweight self-hosted dashboard for NAS / servers',
   icons: { icon: '/favicon.svg' },
 };
 

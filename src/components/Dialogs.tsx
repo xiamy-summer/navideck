@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Icon } from './Icon';
 import { IconPicker } from './IconPicker';
 import type { Group, Item, OpenMode } from '@/lib/types';
+import { useI18n } from '@/i18n';
 
 export interface ItemDraft {
   id?: number;
@@ -26,6 +27,7 @@ interface ItemDialogProps {
 }
 
 export function ItemDialog({ draft, groups, onClose, onSave, onDelete }: ItemDialogProps) {
+  const { t } = useI18n();
   const [form, setForm] = useState<ItemDraft>(draft);
 
   const set = <K extends keyof ItemDraft>(key: K, value: ItemDraft[K]) =>
@@ -34,11 +36,11 @@ export function ItemDialog({ draft, groups, onClose, onSave, onDelete }: ItemDia
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h3 className="mb-4 text-[15px] font-medium">{form.id ? '编辑站点' : '添加站点'}</h3>
+        <h3 className="mb-4 text-[15px] font-medium">{form.id ? t('dialog.item.edit') : t('dialog.item.add')}</h3>
 
         <div className="space-y-3">
           <div>
-            <div className="mb-1.5 text-[13px] text-muted">名称</div>
+            <div className="mb-1.5 text-[13px] text-muted">{t('dialog.item.name')}</div>
             <input className="field" value={form.title} onChange={(e) => set('title', e.target.value)} autoFocus />
           </div>
 
@@ -46,7 +48,7 @@ export function ItemDialog({ draft, groups, onClose, onSave, onDelete }: ItemDia
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <div className="mb-1.5 text-[13px] text-muted">内网地址</div>
+              <div className="mb-1.5 text-[13px] text-muted">{t('dialog.item.urlLan')}</div>
               <input
                 className="field"
                 placeholder="http://192.168.1.10:8080"
@@ -55,7 +57,7 @@ export function ItemDialog({ draft, groups, onClose, onSave, onDelete }: ItemDia
               />
             </div>
             <div>
-              <div className="mb-1.5 text-[13px] text-muted">外网地址</div>
+              <div className="mb-1.5 text-[13px] text-muted">{t('dialog.item.urlWan')}</div>
               <input
                 className="field"
                 placeholder="https://nas.example.com"
@@ -66,13 +68,13 @@ export function ItemDialog({ draft, groups, onClose, onSave, onDelete }: ItemDia
           </div>
 
           <div>
-            <div className="mb-1.5 text-[13px] text-muted">描述（可选）</div>
+            <div className="mb-1.5 text-[13px] text-muted">{t('dialog.item.desc')}</div>
             <input className="field" value={form.desc} onChange={(e) => set('desc', e.target.value)} />
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <div className="mb-1.5 text-[13px] text-muted">所属分组</div>
+              <div className="mb-1.5 text-[13px] text-muted">{t('dialog.item.group')}</div>
               <select
                 className="field"
                 value={form.groupId}
@@ -86,15 +88,15 @@ export function ItemDialog({ draft, groups, onClose, onSave, onDelete }: ItemDia
               </select>
             </div>
             <div>
-              <div className="mb-1.5 text-[13px] text-muted">打开方式</div>
+              <div className="mb-1.5 text-[13px] text-muted">{t('dialog.item.openMode')}</div>
               <select
                 className="field"
                 value={form.openMode}
                 onChange={(e) => set('openMode', e.target.value as OpenMode)}
               >
-                <option value="blank">新标签页</option>
-                <option value="modal">内置小窗口</option>
-                <option value="self">当前标签页</option>
+                <option value="blank">{t('dialog.item.openBlank')}</option>
+                <option value="modal">{t('dialog.item.openModal')}</option>
+                <option value="self">{t('dialog.item.openSelf')}</option>
               </select>
             </div>
           </div>
@@ -103,11 +105,11 @@ export function ItemDialog({ draft, groups, onClose, onSave, onDelete }: ItemDia
         <div className="mt-5 flex items-center gap-2">
           {onDelete ? (
             <button className="btn btn-danger mr-auto" onClick={onDelete}>
-              删除
+              {t('common.delete')}
             </button>
           ) : null}
           <button className="btn" onClick={onClose}>
-            取消
+            {t('common.cancel')}
           </button>
           <button
             className="btn btn-primary"
@@ -116,7 +118,7 @@ export function ItemDialog({ draft, groups, onClose, onSave, onDelete }: ItemDia
               onSave({ ...form, title: form.title.trim() });
             }}
           >
-            保存
+            {t('common.save')}
           </button>
         </div>
       </div>
@@ -131,14 +133,15 @@ interface GroupDialogProps {
 }
 
 export function GroupDialog({ draft, onClose, onSave }: GroupDialogProps) {
+  const { t } = useI18n();
   const [form, setForm] = useState(draft);
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h3 className="mb-4 text-[15px] font-medium">{form.id ? '编辑分组' : '添加分组'}</h3>
+        <h3 className="mb-4 text-[15px] font-medium">{form.id ? t('dialog.group.edit') : t('dialog.group.add')}</h3>
         <div className="space-y-3">
           <div>
-            <div className="mb-1.5 text-[13px] text-muted">分组名称</div>
+            <div className="mb-1.5 text-[13px] text-muted">{t('dialog.group.name')}</div>
             <input
               className="field"
               value={form.name}
@@ -150,7 +153,7 @@ export function GroupDialog({ draft, onClose, onSave }: GroupDialogProps) {
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button className="btn" onClick={onClose}>
-            取消
+            {t('common.cancel')}
           </button>
           <button
             className="btn btn-primary"
@@ -159,7 +162,7 @@ export function GroupDialog({ draft, onClose, onSave }: GroupDialogProps) {
               onSave({ ...form, name: form.name.trim() });
             }}
           >
-            保存
+            {t('common.save')}
           </button>
         </div>
       </div>
@@ -176,19 +179,20 @@ export function ConfirmDialog({
   onClose: () => void;
   onConfirm: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal max-w-sm" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start gap-3">
-          <Icon icon="mdi:help-circle-outline" size={24} title="确认" />
+          <Icon icon="mdi:help-circle-outline" size={24} title={t('common.confirm')} />
           <p className="text-[14px] leading-relaxed">{message}</p>
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button className="btn" onClick={onClose}>
-            取消
+            {t('common.cancel')}
           </button>
           <button className="btn btn-primary" onClick={onConfirm}>
-            确定
+            {t('common.confirm')}
           </button>
         </div>
       </div>

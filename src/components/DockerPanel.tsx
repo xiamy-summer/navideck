@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, type DockerListResult } from '@/lib/api-client';
 import { Icon } from './Icon';
+import { useI18n } from '@/i18n';
 
 export function DockerPanel({ toast }: { toast: (msg: string) => void }) {
+  const { t } = useI18n();
   const [data, setData] = useState<DockerListResult | null>(null);
   const [logs, setLogs] = useState<{ name: string; text: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -13,9 +15,9 @@ export function DockerPanel({ toast }: { toast: (msg: string) => void }) {
     try {
       setData(await api.dockerContainers());
     } catch (err) {
-      toast(err instanceof Error ? err.message : '读取失败');
+      toast(err instanceof Error ? err.message : t('common.loadFailed'));
     }
-  }, [toast]);
+  }, [toast, t]);
 
   useEffect(() => {
     void load();
@@ -27,10 +29,10 @@ export function DockerPanel({ toast }: { toast: (msg: string) => void }) {
     setBusy(id + action);
     try {
       await api.dockerAction(id, action);
-      toast(action === 'start' ? '已启动' : action === 'stop' ? '已停止' : '已重启');
+      toast(action === 'start' ? t('docker.started') : action === 'stop' ? t('docker.stopped') : t('docker.restarted'));
       await load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : '操作失败');
+      toast(err instanceof Error ? err.message : t('common.operationFailed'));
     } finally {
       setBusy(null);
     }
@@ -39,26 +41,23 @@ export function DockerPanel({ toast }: { toast: (msg: string) => void }) {
   const showLogs = async (id: string, name: string) => {
     try {
       const res = await api.dockerLogs(id, 300);
-      setLogs({ name, text: res.logs || '（无日志输出）' });
+      setLogs({ name, text: res.logs || t('docker.noLogs') });
     } catch (err) {
-      toast(err instanceof Error ? err.message : '读取日志失败');
+      toast(err instanceof Error ? err.message : t('docker.logsFailed'));
     }
   };
 
-  if (!data) return <p className="py-6 text-center text-[13px] text-muted">加载中…</p>;
+  if (!data) return <p className="py-6 text-center text-[13px] text-muted">{t('common.loading')}</p>;
 
   if (!data.available) {
     return (
       <div className="space-y-2 py-4">
         <div className="flex items-center gap-2 text-[14px]">
           <Icon icon="mdi:docker" size={22} title="Docker" />
-          未连接 Docker
+          {t('docker.notConnected')}
         </div>
-        <p className="text-[13px] text-muted">{data.message ?? '未检测到 Docker Socket'}</p>
-        <p className="text-[12px] text-muted">
-          部署时需要挂载宿主机 Socket：<code>-v /var/run/docker.sock:/var/run/docker.sock:ro</code>
-          （群晖上只读挂载即可满足查看与控制）
-        </p>
+        <p className="text-[13px] text-muted">{data.message ?? t('docker.noSocket')}</p>
+        <p className="text-[12px] text-muted">{t('docker.socketTip')}</p>
       </div>
     );
   }
@@ -66,16 +65,16 @@ export function DockerPanel({ toast }: { toast: (msg: string) => void }) {
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <h3 className="text-[14px] font-medium">容器列表</h3>
+        <h3 className="text-[14px] font-medium">{t('docker.title')}</h3>
         {data.info ? (
           <span className="chip">
-            共 {data.info.containers} 个 · 运行 {data.info.running} · 停止 {data.info.stopped}
+            {t('docker.total', { t: data.info.containers, r: data.info.running, s: data.info.stopped })}
           </span>
         ) : null}
         {data.info?.version ? <span className="chip">Docker {data.info.version}</span> : null}
         <button className="btn ml-auto" onClick={() => void load()}>
-          <Icon icon="mdi:refresh" size={16} title="刷新" />
-          刷新
+          <Icon icon="mdi:refresh" size={16} title={t('common.refresh')} />
+          {t('common.refresh')}
         </button>
       </div>
 
@@ -90,7 +89,7 @@ export function DockerPanel({ toast }: { toast: (msg: string) => void }) {
                   style={{ background: running ? '#22c55e' : '#94a3b8' }}
                 />
                 <span className="text-[14px] font-medium">{c.name}</span>
-                <span className="chip">{running ? '运行中' : c.state}</span>
+                <span className="chip">{running ? t('common.running') : c.state}</span>
                 <span className="truncate text-[12px] text-muted">{c.image}</span>
 
                 <div className="ml-auto flex flex-wrap gap-1">
@@ -98,28 +97,28 @@ export function DockerPanel({ toast }: { toast: (msg: string) => void }) {
                     className="btn btn-ghost"
                     disabled={!!busy}
                     onClick={() => void act(c.id, 'start')}
-                    title="启动"
+                    title={t('docker.start')}
                   >
-                    <Icon icon="mdi:play" size={16} title="启动" />
+                    <Icon icon="mdi:play" size={16} title={t('docker.start')} />
                   </button>
                   <button
                     className="btn btn-ghost"
                     disabled={!!busy}
                     onClick={() => void act(c.id, 'stop')}
-                    title="停止"
+                    title={t('docker.stop')}
                   >
-                    <Icon icon="mdi:stop" size={16} title="停止" />
+                    <Icon icon="mdi:stop" size={16} title={t('docker.stop')} />
                   </button>
                   <button
                     className="btn btn-ghost"
                     disabled={!!busy}
                     onClick={() => void act(c.id, 'restart')}
-                    title="重启"
+                    title={t('docker.restart')}
                   >
-                    <Icon icon="mdi:restart" size={16} title="重启" />
+                    <Icon icon="mdi:restart" size={16} title={t('docker.restart')} />
                   </button>
                   <button className="btn btn-ghost" onClick={() => void showLogs(c.id, c.name)}>
-                    日志
+                    {t('docker.logs')}
                   </button>
                 </div>
               </div>
@@ -128,13 +127,12 @@ export function DockerPanel({ toast }: { toast: (msg: string) => void }) {
                 <span>{c.status}</span>
                 {c.ports.length ? (
                   <span>
-                    端口：
-                    {c.ports
-                      .map((p) => (p.public ? `${p.public}→${p.private}` : `${p.private}`))
-                      .join('，')}
+                    {t('docker.ports', {
+                      list: c.ports.map((p) => (p.public ? `${p.public}→${p.private}` : `${p.private}`)).join('，'),
+                    })}
                   </span>
                 ) : (
-                  <span>无端口映射</span>
+                  <span>{t('docker.noPorts')}</span>
                 )}
               </div>
             </div>
@@ -146,9 +144,9 @@ export function DockerPanel({ toast }: { toast: (msg: string) => void }) {
         <div className="modal-backdrop" onClick={() => setLogs(null)}>
           <div className="modal max-w-3xl" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-center">
-              <h3 className="text-[15px] font-medium">{logs.name} 日志</h3>
+              <h3 className="text-[15px] font-medium">{t('docker.logsTitle', { name: logs.name })}</h3>
               <button className="btn btn-ghost ml-auto" onClick={() => setLogs(null)}>
-                <Icon icon="mdi:close" size={18} title="关闭" />
+                <Icon icon="mdi:close" size={18} title={t('common.close')} />
               </button>
             </div>
             <pre className="max-h-[60vh] overflow-auto rounded-lg bg-canvas p-3 font-mono text-[12px] leading-relaxed">

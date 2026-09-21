@@ -22,6 +22,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Icon } from './Icon';
 import type { GroupWithItems } from '@/lib/api-client';
 import type { Group, Item, NetMode, Settings } from '@/lib/types';
+import { useI18n } from '@/i18n';
 
 interface Props {
   groups: GroupWithItems[];
@@ -152,7 +153,8 @@ export function NavBoard(props: Props) {
 }
 
 function SortableGroup({ group, activeId, ...props }: Props & { group: GroupWithItems; activeId: string | null }) {
-  const { settings, editMode } = props;
+  const { editMode } = props;
+  const { t } = useI18n();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `g-${group.id}`,
     disabled: !editMode,
@@ -168,11 +170,11 @@ function SortableGroup({ group, activeId, ...props }: Props & { group: GroupWith
         {editMode ? (
           <button
             className="cursor-grab text-muted hover:text-brand active:cursor-grabbing"
-            title="拖动排序"
+            title={t('common.dragSort')}
             {...attributes}
             {...listeners}
           >
-            <Icon icon="mdi:drag" size={18} title="拖拽" />
+            <Icon icon="mdi:drag" size={18} title={t('common.drag')} />
           </button>
         ) : null}
         <Icon icon={group.icon} size={20} title={group.name} />
@@ -181,18 +183,18 @@ function SortableGroup({ group, activeId, ...props }: Props & { group: GroupWith
 
         {editMode ? (
           <div className="ml-auto flex items-center gap-1">
-            <button className="btn btn-ghost" title="编辑分组" onClick={() => props.onEditGroup(group)}>
-              <Icon icon="mdi:pencil-outline" size={17} title="编辑" />
+            <button className="btn btn-ghost" title={t('dialog.group.edit')} onClick={() => props.onEditGroup(group)}>
+              <Icon icon="mdi:pencil-outline" size={17} title={t('common.edit')} />
             </button>
-            <button className="btn btn-ghost" title="添加站点" onClick={() => props.onAddItem(group.id)}>
-              <Icon icon="mdi:plus" size={18} title="添加" />
+            <button className="btn btn-ghost" title={t('home.addSite')} onClick={() => props.onAddItem(group.id)}>
+              <Icon icon="mdi:plus" size={18} title={t('common.add')} />
             </button>
             <button
               className="btn btn-ghost text-red-500"
-              title="删除分组"
+              title={t('common.deleteGroup')}
               onClick={() => props.onDeleteGroup(group)}
             >
-              <Icon icon="mdi:trash-can-outline" size={17} title="删除" />
+              <Icon icon="mdi:trash-can-outline" size={17} title={t('common.delete')} />
             </button>
           </div>
         ) : null}
@@ -201,7 +203,7 @@ function SortableGroup({ group, activeId, ...props }: Props & { group: GroupWith
       <SortableContext items={group.items.map((i) => `i-${i.id}`)} strategy={rectSortingStrategy}>
         <div
           className="grid-area"
-          style={{ ['--card-min' as string]: `${Math.max(96, Math.round(1080 / Math.max(2, settings.columns)))}px` }}
+          style={{ ['--card-min' as string]: `${Math.max(96, Math.round(1080 / Math.max(2, props.settings.columns)))}px` }}
         >
           {group.items.map((item) => (
             <SortableItem key={item.id} item={item} activeId={activeId} {...props} />
@@ -211,8 +213,8 @@ function SortableGroup({ group, activeId, ...props }: Props & { group: GroupWith
               className="flex min-h-[92px] flex-col items-center justify-center gap-1 rounded-[var(--card-radius,14px)] border border-dashed border-line text-[12px] text-muted transition hover:border-brand hover:text-brand"
               onClick={() => props.onAddItem(group.id)}
             >
-              <Icon icon="mdi:plus" size={20} title="添加" />
-              添加站点
+              <Icon icon="mdi:plus" size={20} title={t('common.add')} />
+              {t('home.addSite')}
             </button>
           ) : null}
         </div>
@@ -223,6 +225,7 @@ function SortableGroup({ group, activeId, ...props }: Props & { group: GroupWith
 
 function SortableItem({ item, ...props }: Props & { item: Item; activeId: string | null }) {
   const { settings, editMode, netMode } = props;
+  const { t } = useI18n();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `i-${item.id}`,
     disabled: !editMode,
@@ -250,23 +253,23 @@ function SortableItem({ item, ...props }: Props & { item: Item; activeId: string
       {settings.showDesc && item.desc ? (
         <span className="w-full truncate text-[11px] text-muted">{item.desc}</span>
       ) : null}
-      {!url ? <span className="text-[11px] text-red-500">未配置链接</span> : null}
+      {!url ? <span className="text-[11px] text-red-500">{t('home.noUrl')}</span> : null}
 
       {editMode ? (
         <div className="absolute right-1 top-1 flex gap-0.5" onClick={(e) => e.stopPropagation()}>
           <button
             className="rounded-md bg-surface/90 p-1 text-muted hover:text-brand"
-            title="编辑"
+            title={t('common.edit')}
             onClick={() => props.onEditItem(item, item.groupId)}
           >
-            <Icon icon="mdi:pencil-outline" size={15} title="编辑" />
+            <Icon icon="mdi:pencil-outline" size={15} title={t('common.edit')} />
           </button>
           <button
             className="rounded-md bg-surface/90 p-1 text-muted hover:text-red-500"
-            title="删除"
+            title={t('common.delete')}
             onClick={() => props.onDeleteItem(item)}
           >
-            <Icon icon="mdi:trash-can-outline" size={15} title="删除" />
+            <Icon icon="mdi:trash-can-outline" size={15} title={t('common.delete')} />
           </button>
         </div>
       ) : null}

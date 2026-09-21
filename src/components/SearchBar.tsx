@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Icon } from './Icon';
 import type { Item, Settings } from '@/lib/types';
+import { useI18n } from '@/i18n';
 
 interface Props {
   settings: Settings;
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export function SearchBar({ settings, items, onOpenItem }: Props) {
+  const { t } = useI18n();
   const [query, setQuery] = useState('');
   const [engineId, setEngineId] = useState(settings.searchEngine);
   const [engineOpen, setEngineOpen] = useState(false);
@@ -54,7 +56,7 @@ export function SearchBar({ settings, items, onOpenItem }: Props) {
           <button
             type="button"
             className="flex h-6 w-6 flex-none items-center justify-center rounded-full hover:bg-brand/10"
-            title={engine?.name ?? '搜索引擎'}
+            title={engine?.name ?? t('common.searchEngine')}
             onClick={() => setEngineOpen((v) => !v)}
           >
             <Icon icon={engine?.icon} size={18} title={engine?.name} />
@@ -68,13 +70,13 @@ export function SearchBar({ settings, items, onOpenItem }: Props) {
             if (e.key === 'Enter') submit();
             if (e.key === 'Escape') setQuery('');
           }}
-          placeholder={settings.searchPlaceholder || '搜索…'}
+          placeholder={settings.searchPlaceholder || t('search.placeholder')}
           className="min-w-0 flex-1 bg-transparent text-[14px] outline-none placeholder:text-muted"
           style={{ color: settings.searchText || undefined }}
         />
 
-        <button type="button" onClick={submit} className="flex-none text-muted hover:text-brand" title="搜索">
-          <Icon icon="mdi:magnify" size={20} title="搜索" />
+        <button type="button" onClick={submit} className="flex-none text-muted hover:text-brand" title={t('common.search')}>
+          <Icon icon="mdi:magnify" size={20} title={t('common.search')} />
         </button>
       </div>
 
