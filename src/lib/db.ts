@@ -414,4 +414,4 @@ export function deleteFile(userId: number, id: number): UploadedFile | null {
   return row;
 }
 
-export { UPLOAD_DIR };
+export { UPLOAD_DIR, DATA_DIR };
