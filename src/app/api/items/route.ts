@@ -21,6 +21,7 @@ export async function POST(req: Request) {
       desc: body.desc ?? '',
       openMode: (body.openMode ?? 'blank') as OpenMode,
       color: body.color ?? null,
+      service: body.service ?? null,
     });
     return ok(item, { status: 201 });
   });

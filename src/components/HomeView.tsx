@@ -11,6 +11,7 @@ import { CommandPalette } from './CommandPalette';
 import { Widgets } from './Widgets';
 import { ConfirmDialog, emptyItemDraft, GroupDialog, ItemDialog, itemToDraft, type ItemDraft } from './Dialogs';
 import type { Group, Item, NetMode, Settings, ThemeMode, User } from '@/lib/types';
+import type { ProbeResult } from '@/lib/serviceWidgets';
 import { useI18n } from '@/i18n';
 
 interface Props {
@@ -34,6 +35,26 @@ export function HomeView({
   const { t } = useI18n();
   const [groups, setGroups] = useState<GroupWithItems[]>(initialGroups);
   const [settings, setSettings] = useState<Settings>(initialSettings);
+  const [serviceStatus, setServiceStatus] = useState<Record<string, ProbeResult>>({});
+
+  // 站点服务集成的实时状态，60 秒刷新一次（密钥存服务端，不经前端回传）
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      try {
+        const res = await api.serviceStatus();
+        if (alive) setServiceStatus(res.status ?? {});
+      } catch {
+        /* 未登录或无配置时静默 */
+      }
+    };
+    void load();
+    const timer = setInterval(() => void load(), 60_000);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
+  }, []);
   const [netMode, setNetMode] = useState<NetMode>(initialSettings.netMode);
   const [editMode, setEditMode] = useState(false);
   const [theme, setTheme] = useState<ThemeMode>(initialSettings.theme);
@@ -376,6 +397,7 @@ export function HomeView({
           onDeleteItem={(item) => setConfirmDelete({ kind: 'item', id: item.id, name: item.title })}
           onDeleteGroup={(group) => setConfirmDelete({ kind: 'group', id: group.id, name: group.name })}
           onAddItem={(groupId) => setPending({ kind: 'item', draft: emptyItemDraft(groupId) })}
+          serviceStatus={serviceStatus}
         />
       )}
 

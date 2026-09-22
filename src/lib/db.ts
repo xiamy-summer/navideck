@@ -107,6 +107,12 @@ function migrate(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_metric_samples_t ON metric_samples(t);
     CREATE INDEX IF NOT EXISTS idx_metric_alerts_t ON metric_alerts(t);
   `);
+
+  // 旧库升级：为已有 items 表补上服务集成列
+  const itemCols = db.prepare('PRAGMA table_info(items)').all() as Array<{ name: string }>;
+  if (!itemCols.some((c) => c.name === 'service')) {
+    db.exec('ALTER TABLE items ADD COLUMN service TEXT');
+  }
 }
 
 const globalForDb = globalThis as unknown as { __navDb?: Database.Database };
@@ -309,6 +315,13 @@ export function listItemsByGroup(userId: number, groupId: number): Item[] {
     .all(groupId, userId) as Item[];
 }
 
+/** 列出当前用户所有配置了服务集成的站点，用于批量探测（密钥不经前端回传） */
+export function listServiceConfigs(userId: number): Array<{ id: number; service: string }> {
+  return db
+    .prepare("SELECT id, service FROM items WHERE userId = ? AND service IS NOT NULL AND service != ''")
+    .all(userId) as Array<{ id: number; service: string }>;
+}
+
 export function createItem(
   userId: number,
   input: Partial<Item> & { groupId: number; title: string },
@@ -320,8 +333,8 @@ export function createItem(
     .get(input.groupId) as { s: number };
   const info = db
     .prepare(
-      `INSERT INTO items (groupId, userId, title, icon, urlLan, urlWan, desc, openMode, color, sort, createdAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO items (groupId, userId, title, icon, urlLan, urlWan, desc, openMode, color, sort, service, createdAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       input.groupId,
@@ -334,6 +347,7 @@ export function createItem(
       (input.openMode ?? 'blank') as OpenMode,
       input.color ?? null,
       next.s,
+      input.service ?? null,
       Date.now(),
     );
   return db.prepare('SELECT * FROM items WHERE id = ?').get(info.lastInsertRowid) as Item;
@@ -342,7 +356,12 @@ export function createItem(
 export function updateItem(
   userId: number,
   id: number,
-  patch: Partial<Pick<Item, 'title' | 'icon' | 'urlLan' | 'urlWan' | 'desc' | 'openMode' | 'color' | 'sort' | 'groupId'>>,
+  patch: Partial<
+    Pick<
+      Item,
+      'title' | 'icon' | 'urlLan' | 'urlWan' | 'desc' | 'openMode' | 'color' | 'sort' | 'groupId' | 'service'
+    >
+  >,
 ): Item | null {
   const owned = db.prepare('SELECT id FROM items WHERE id = ? AND userId = ?').get(id, userId);
   if (!owned) return null;
@@ -356,6 +375,7 @@ export function updateItem(
     color: 'color',
     sort: 'sort',
     groupId: 'groupId',
+    service: 'service',
   };
   const sets: string[] = [];
   const args: unknown[] = [];

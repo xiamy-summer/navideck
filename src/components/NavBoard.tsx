@@ -22,6 +22,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Icon } from './Icon';
 import type { GroupWithItems } from '@/lib/api-client';
 import type { Group, Item, NetMode, Settings } from '@/lib/types';
+import type { ProbeResult } from '@/lib/serviceWidgets';
 import { useI18n } from '@/i18n';
 
 interface Props {
@@ -30,6 +31,8 @@ interface Props {
   settings: Settings;
   netMode: NetMode;
   editMode: boolean;
+  /** 站点服务集成的实时状态，key 为站点 id */
+  serviceStatus?: Record<string, ProbeResult>;
   onPersist: (prev: GroupWithItems[], next: GroupWithItems[]) => void;
   onOpenItem: (item: Item) => void;
   onEditItem: (item: Item, groupId: number) => void;
@@ -224,7 +227,7 @@ function SortableGroup({ group, activeId, ...props }: Props & { group: GroupWith
 }
 
 function SortableItem({ item, ...props }: Props & { item: Item; activeId: string | null }) {
-  const { settings, editMode, netMode } = props;
+  const { settings, editMode, netMode, serviceStatus } = props;
   const { t } = useI18n();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `i-${item.id}`,
@@ -253,6 +256,23 @@ function SortableItem({ item, ...props }: Props & { item: Item; activeId: string
       {settings.showDesc && item.desc ? (
         <span className="w-full truncate text-[11px] text-muted">{item.desc}</span>
       ) : null}
+
+      {serviceStatus?.[item.id] ? (
+        <span className="flex w-full flex-wrap items-center justify-center gap-x-2 text-[10px]">
+          {serviceStatus[item.id].ok ? null : (
+            <span
+              className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500"
+              title={serviceStatus[item.id].message ?? ''}
+            />
+          )}
+          {serviceStatus[item.id].fields.map((f) => (
+            <span key={f.label} className="text-muted">
+              {f.label} {f.value}
+            </span>
+          ))}
+        </span>
+      ) : null}
+
       {!url ? <span className="text-[11px] text-red-500">{t('home.noUrl')}</span> : null}
 
       {editMode ? (

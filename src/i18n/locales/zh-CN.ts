@@ -287,6 +287,18 @@ export const zhCN: Record<string, string> = {
   'monitor.alertCooldown': '告警冷却',
   'monitor.alertCooldownHint': '单位：分钟，同类告警在该时间内不重复记录',
 
+  'common.remove': '移除',
+
+  'service.title': '服务集成',
+  'service.add': '接入服务数据',
+  'service.custom': '自定义 API',
+  'service.key': 'API Key / Token',
+  'service.test': '测试连接',
+  'service.testOk': '连接成功',
+  'service.testFail': '连接失败',
+  'service.headersHint': '请求头，每行一条，格式：Name: value',
+  'service.fieldsHint': '取值字段，每行一条，格式：标签 路径，例：movies length',
+
   'widget.system': '系统',
   'widget.load': '负载 {n}',
   'widget.cpu': 'CPU',

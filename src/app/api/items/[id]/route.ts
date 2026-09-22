@@ -25,6 +25,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     if (body.openMode !== undefined) patch.openMode = body.openMode as OpenMode;
     if (body.groupId !== undefined) patch.groupId = Number(body.groupId);
     if (body.sort !== undefined) patch.sort = Number(body.sort);
+    if (body.service !== undefined) patch.service = body.service;
     const updated = updateItem(target.owner.id, Number(id), patch);
     if (!updated) return fail('站点不存在', 404);
     return ok(updated);

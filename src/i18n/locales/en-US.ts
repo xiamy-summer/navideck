@@ -287,6 +287,18 @@ export const enUS: Record<string, string> = {
   'monitor.alertCooldown': 'Alert cooldown',
   'monitor.alertCooldownHint': 'Minutes before the same metric alerts again',
 
+  'common.remove': 'Remove',
+
+  'service.title': 'Service integration',
+  'service.add': 'Attach service data',
+  'service.custom': 'Custom API',
+  'service.key': 'API key or token',
+  'service.test': 'Test connection',
+  'service.testOk': 'Connected',
+  'service.testFail': 'Connection failed',
+  'service.headersHint': 'Headers, one per line, format: Name: value',
+  'service.fieldsHint': 'Fields, one per line, format: label path, e.g. movies length',
+
   'widget.system': 'System',
   'widget.load': 'Load {n}',
   'widget.cpu': 'CPU',

@@ -1,4 +1,6 @@
-import type { Group, Item, OpenMode, Role, Settings, UploadedFile, User } from './types';
+import type { Group, Item, ItemService, OpenMode, Role, Settings, UploadedFile, User } from './types';
+// 仅类型导入，避免把服务端模块打进前端包
+import type { ProbeResult as ServiceProbe, ServiceTemplate as ServiceTemplateOption } from './serviceWidgets';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
@@ -149,13 +151,19 @@ export const api = {
       desc?: string;
       openMode?: OpenMode;
       color?: string | null;
+      service?: string | null;
     },
     as?: number | null,
   ) => request<Item>(`/api/items${asQuery(as)}`, { method: 'POST', body: JSON.stringify(input) }),
 
   updateItem: (
     id: number,
-    patch: Partial<Pick<Item, 'title' | 'icon' | 'urlLan' | 'urlWan' | 'desc' | 'openMode' | 'color' | 'sort' | 'groupId'>>,
+    patch: Partial<
+      Pick<
+        Item,
+        'title' | 'icon' | 'urlLan' | 'urlWan' | 'desc' | 'openMode' | 'color' | 'sort' | 'groupId' | 'service'
+      >
+    >,
     as?: number | null,
   ) => request<Item>(`/api/items/${id}${asQuery(as)}`, { method: 'PATCH', body: JSON.stringify(patch) }),
 
@@ -266,4 +274,11 @@ export const api = {
 
   backupRestore: (name: string) =>
     request<{ success: boolean }>('/api/backup/restore', { method: 'POST', body: JSON.stringify({ name }) }),
+
+  serviceTemplates: () => request<{ templates: ServiceTemplateOption[] }>('/api/services/templates'),
+
+  serviceTest: (config: ItemService) =>
+    request<ServiceProbe>('/api/services/test', { method: 'POST', body: JSON.stringify({ config }) }),
+
+  serviceStatus: () => request<{ status: Record<string, ServiceProbe> }>('/api/services/status'),
 };

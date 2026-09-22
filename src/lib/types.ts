@@ -38,6 +38,29 @@ export interface Item {
   color: string | null;
   sort: number;
   createdAt: number;
+  /** 服务集成配置（ItemService 序列化后的 JSON 字符串），未配置时为 null */
+  service?: string | null;
+}
+
+/** 站点绑定的服务集成配置，对应 Homepage 的 service widget */
+export interface ItemService {
+  /** 模板 id；'custom' 表示通用自定义请求 */
+  type: string;
+  /** 服务根地址，如 http://192.168.1.10:8989 */
+  url: string;
+  /** API Key / Token，明文存库，对外接口不回显 */
+  key: string;
+  /** 结果缓存秒数，默认 60 */
+  cacheSec?: number;
+  /** type 为 custom 时的自定义请求配置 */
+  custom?: {
+    method: string;
+    path: string;
+    /** POST/PUT 时的请求体（JSON 字符串） */
+    body?: string;
+    headers: Array<{ name: string; value: string }>;
+    fields: Array<{ label: string; path: string }>;
+  };
 }
 
 export interface SearchEngine {
