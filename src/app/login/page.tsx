@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api-client';
 import { Icon } from '@/components/Icon';
@@ -13,6 +13,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [oidc, setOidc] = useState<{ enabled: boolean; label: string } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/auth/oidc/config')
+      .then((r) => r.json())
+      .then((d) => setOidc({ enabled: Boolean(d.enabled), label: d.label || t('login.sso') }))
+      .catch(() => setOidc({ enabled: false, label: t('login.sso') }));
+  }, [t]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,6 +35,10 @@ export default function LoginPage() {
       setError(err instanceof Error ? err.message : t('common.loginFailed'));
       setLoading(false);
     }
+  };
+
+  const startSso = () => {
+    window.location.href = '/api/auth/oidc/login';
   };
 
   return (
@@ -61,6 +73,13 @@ export default function LoginPage() {
         <button className="btn btn-primary mt-5 w-full" disabled={loading || !username || !password}>
           {loading ? t('login.submitting') : t('common.login')}
         </button>
+
+        {oidc?.enabled ? (
+          <button type="button" className="btn mt-2 w-full" onClick={startSso}>
+            <Icon icon="mdi:shield-key-outline" size={17} title={t('login.sso')} />
+            {oidc.label || t('login.sso')}
+          </button>
+        ) : null}
 
         <button type="button" className="btn mt-2 w-full" onClick={() => router.push('/')}>
           {t('login.asGuest')}

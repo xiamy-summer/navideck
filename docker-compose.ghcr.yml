@@ -20,3 +20,14 @@ services:
       JWT_SECRET: please-change-this-secret
       DEFAULT_ADMIN_PASSWORD: admin123
       NEXT_PUBLIC_ICONIFY_API: https://api.iconify.design
+      # ----------------- OIDC 单点登录（默认关闭，按需启用） -----------------
+      OIDC_ENABLED: "false"
+      OIDC_ISSUER: ""
+      OIDC_CLIENT_ID: ""
+      OIDC_CLIENT_SECRET: ""
+      OIDC_REDIRECT_URI: ""
+      OIDC_SCOPES: "openid email profile"
+      OIDC_DEFAULT_ROLE: "user"
+      OIDC_ADMIN_CLAIM: ""
+      OIDC_ADMIN_VALUE: ""
+      OIDC_BUTTON_LABEL: "单点登录"

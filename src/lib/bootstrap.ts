@@ -37,7 +37,7 @@ const DEMO: Array<{ name: string; icon: string; items: Array<[string, string, st
   },
 ];
 
-function seedDemo(userId: number) {
+export function seedDemo(userId: number) {
   if (listGroups(userId).length > 0) return;
   for (const group of DEMO) {
     const g = createGroup(userId, group.name, group.icon);

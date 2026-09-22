@@ -305,11 +305,7 @@ export function HomeView({
       </header>
 
       {settings.widgetsEnabled && settings.widgetPosition === 'top' ? (
-        <Widgets
-          showSystem={settings.widgetSystem}
-          showDocker={settings.widgetDocker && settings.dockerEnabled}
-          refreshSec={settings.widgetRefresh}
-        />
+        <Widgets settings={settings} />
       ) : null}
 
       {editMode && user ? (
@@ -385,11 +381,7 @@ export function HomeView({
 
       {settings.widgetsEnabled && settings.widgetPosition === 'bottom' ? (
         <div className="mt-6">
-          <Widgets
-            showSystem={settings.widgetSystem}
-            showDocker={settings.widgetDocker && settings.dockerEnabled}
-            refreshSec={settings.widgetRefresh}
-          />
+          <Widgets settings={settings} />
         </div>
       ) : null}
 

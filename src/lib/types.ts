@@ -92,6 +92,16 @@ export interface Settings {
   widgetSystem: boolean;
   widgetDocker: boolean;
   widgetRefresh: number;
+
+  /** 扩展小部件（时钟 / 天气 / RSS / 便签） */
+  widgetClock: boolean;
+  widgetWeather: boolean;
+  widgetWeatherCity: string;
+  widgetRss: boolean;
+  widgetRssFeeds: string[];
+  widgetRssMax: number;
+  widgetNotes: boolean;
+  widgetNotesText: string;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -138,6 +148,15 @@ export const DEFAULT_SETTINGS: Settings = {
   widgetSystem: true,
   widgetDocker: true,
   widgetRefresh: 10,
+
+  widgetClock: true,
+  widgetWeather: false,
+  widgetWeatherCity: '',
+  widgetRss: false,
+  widgetRssFeeds: [],
+  widgetRssMax: 8,
+  widgetNotes: false,
+  widgetNotesText: '',
 };
 
 export interface UploadedFile {

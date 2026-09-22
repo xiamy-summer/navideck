@@ -359,6 +359,64 @@ function AppearanceTab({
           onChange={(v) => onSave({ widgetRefresh: v })}
         />
       </Row>
+
+      <div className="my-2 border-t border-line pt-3 text-[12px] font-medium text-muted">{t('appearance.widgetExtensions')}</div>
+
+      <Row label={t('appearance.widgetClock')}>
+        <Switch value={settings.widgetClock} onChange={(v) => onSave({ widgetClock: v })} />
+      </Row>
+
+      <Row label={t('appearance.widgetWeather')}>
+        <Switch value={settings.widgetWeather} onChange={(v) => onSave({ widgetWeather: v })} />
+      </Row>
+      <Row label={t('appearance.widgetWeatherCity')} hint={t('appearance.widgetWeatherCityHint')}>
+        <input
+          className="field w-48"
+          placeholder={t('appearance.widgetWeatherCity')}
+          value={settings.widgetWeatherCity}
+          onChange={(e) => onSave({ widgetWeatherCity: e.target.value })}
+        />
+      </Row>
+
+      <Row label={t('appearance.widgetRss')}>
+        <Switch value={settings.widgetRss} onChange={(v) => onSave({ widgetRss: v })} />
+      </Row>
+      <Row label={t('appearance.widgetRssFeeds')} hint={t('appearance.widgetRssFeedsHint')}>
+        <textarea
+          className="field h-24 w-72 resize-y font-mono text-[12px]"
+          placeholder="https://example.com/feed.xml"
+          value={settings.widgetRssFeeds.join('\n')}
+          onChange={(e) =>
+            onSave({
+              widgetRssFeeds: e.target.value
+                .split('\n')
+                .map((s) => s.trim())
+                .filter(Boolean),
+            })
+          }
+        />
+      </Row>
+      <Row label={t('appearance.widgetRssMax')}>
+        <Num
+          value={settings.widgetRssMax}
+          min={1}
+          max={30}
+          suffix={t('common.items')}
+          onChange={(v) => onSave({ widgetRssMax: v })}
+        />
+      </Row>
+
+      <Row label={t('appearance.widgetNotes')}>
+        <Switch value={settings.widgetNotes} onChange={(v) => onSave({ widgetNotes: v })} />
+      </Row>
+      <Row label={t('appearance.widgetNotesText')}>
+        <textarea
+          className="field h-28 w-72 resize-y text-[12px]"
+          placeholder={"# 便签\n- 支持 **Markdown**\n- 链接 [NaviDeck](https://example.com)"}
+          value={settings.widgetNotesText}
+          onChange={(e) => onSave({ widgetNotesText: e.target.value })}
+        />
+      </Row>
     </div>
   );
 }

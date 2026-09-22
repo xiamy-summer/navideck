@@ -18,16 +18,37 @@
 | 数据 | 配置导出/导入（合并或覆盖）、恢复默认设置 |
 | 文件 | 上传文件池，按内容哈希去重，重复上传不占额外空间，可复制链接引用 |
 | Docker | 容器列表与状态、启动/停止/重启、日志查看（需挂载 `docker.sock`，仅管理员可操作） |
-| 小组件 | 首页系统概览与容器概览卡片，可开关、可放顶部或底部、刷新间隔可调 |
+| 小组件 | 首页系统概览与容器概览卡片，可开关、可放顶部或底部、刷新间隔可调；另含扩展小部件：时钟、天气（Open-Meteo 免 Key）、RSS 订阅、Markdown 便签 |
 | 监控 | CPU / 内存 / 磁盘 / 网络速率实时图表，5 秒采样，保留最近 10 分钟 |
 | 部署 | 多架构 Docker 镜像、docker-compose、standalone 运行，首屏 JS 约 130 KB |
 
 ## 规划中
 
-- 多语言（i18n）界面
-- 图标离线包与自定义上传图标
 - 容器创建 / 镜像管理 / 实时日志跟随
 - 站点健康检查（探测链接可访问性并在卡片上标记）
+- 自定义图标上传 / Emoji 图标、背景图与主题预设
+- 监控历史持久化 + 告警、分组共享 / 公共分组、操作审计日志、2FA
+
+## OIDC 单点登录（可选）
+
+支持任意标准 OIDC 身份提供商（Authelia / Authentik / Keycloak / Zitadel / Google / Entra ID 等），
+采用授权码 + PKCE 流程，ID Token 经 JWKS 验证。启用后登录页出现「单点登录」按钮，与账号密码登录并存；
+首次通过 OIDC 登录会自动建档（默认角色 `user`，可由 `OIDC_DEFAULT_ROLE` 调整）。
+
+在 `docker-compose.yml` 或 `.env` 中配置：
+
+| 变量 | 说明 |
+| --- | --- |
+| `OIDC_ENABLED` | 设为 `true` 启用 |
+| `OIDC_ISSUER` | 签发方地址，自动拼接 `/.well-known/openid-configuration` |
+| `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET` | 在 IdP 注册的客户端凭据 |
+| `OIDC_REDIRECT_URI` | 回调地址，默认按请求域名自动推断；建议显式填写为 `https://<你的域名>/api/auth/oidc/callback` |
+| `OIDC_SCOPES` | 授权范围，默认 `openid email profile` |
+| `OIDC_DEFAULT_ROLE` | 自动建档默认角色（`user` / `admin`） |
+| `OIDC_ADMIN_CLAIM` / `OIDC_ADMIN_VALUE` | 可选：当某 claim 的值等于指定值时授予 `admin`（如 `groups` / `admin`） |
+| `OIDC_BUTTON_LABEL` | 登录页按钮文案 |
+
+> 在 IdP 侧登记客户端时，回调地址（Redirect URI）必须填 `https://<你的域名>/api/auth/oidc/callback`，且客户端类型需允许授权码流。
 
 ## 快速开始
 
