@@ -738,6 +738,65 @@ function DataTab({
       </div>
 
       <div className="border-t border-line pt-5">
+        <h3 className="mb-2 text-[14px] font-medium">{t('monitor.title')}</h3>
+        <p className="mb-3 text-[12px] text-muted">{t('monitor.hint')}</p>
+        <Row label={t('monitor.retentionDays')} hint={t('monitor.retentionDaysHint')}>
+          <Num
+            value={settings.metricRetentionDays}
+            min={1}
+            max={365}
+            onChange={(v) => onSave({ metricRetentionDays: v })}
+          />
+        </Row>
+        <Row label={t('monitor.archiveInterval')} hint={t('monitor.archiveIntervalHint')}>
+          <Num
+            value={settings.metricArchiveInterval}
+            min={30}
+            max={3600}
+            onChange={(v) => onSave({ metricArchiveInterval: v })}
+          />
+        </Row>
+        <Row label={t('monitor.alertEnabled')} hint={t('monitor.alertEnabledHint')}>
+          <Switch value={settings.metricAlertEnabled} onChange={(v) => onSave({ metricAlertEnabled: v })} />
+        </Row>
+        <Row label={t('monitor.alertCpu')} hint={t('monitor.thresholdHint')}>
+          <Num
+            value={settings.metricAlertCpu}
+            min={1}
+            max={100}
+            suffix="%"
+            onChange={(v) => onSave({ metricAlertCpu: v })}
+          />
+        </Row>
+        <Row label={t('monitor.alertMem')} hint={t('monitor.thresholdHint')}>
+          <Num
+            value={settings.metricAlertMem}
+            min={1}
+            max={100}
+            suffix="%"
+            onChange={(v) => onSave({ metricAlertMem: v })}
+          />
+        </Row>
+        <Row label={t('monitor.alertDisk')} hint={t('monitor.thresholdHint')}>
+          <Num
+            value={settings.metricAlertDisk}
+            min={1}
+            max={100}
+            suffix="%"
+            onChange={(v) => onSave({ metricAlertDisk: v })}
+          />
+        </Row>
+        <Row label={t('monitor.alertCooldown')} hint={t('monitor.alertCooldownHint')}>
+          <Num
+            value={settings.metricAlertCooldown}
+            min={1}
+            max={1440}
+            onChange={(v) => onSave({ metricAlertCooldown: v })}
+          />
+        </Row>
+      </div>
+
+      <div className="border-t border-line pt-5">
         <h3 className="mb-2 text-[14px] font-medium">{t('data.backupManage')}</h3>
         <div className="flex flex-wrap items-center gap-2">
           <button

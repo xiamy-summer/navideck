@@ -86,6 +86,26 @@ function migrate(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_groups_user ON groups(userId, sort);
     CREATE INDEX IF NOT EXISTS idx_items_group ON items(groupId, sort);
     CREATE INDEX IF NOT EXISTS idx_files_hash ON files(hash);
+    CREATE TABLE IF NOT EXISTS metric_samples (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      t INTEGER NOT NULL,
+      cpu REAL NOT NULL,
+      mem REAL NOT NULL,
+      disk REAL NOT NULL,
+      netRx REAL NOT NULL,
+      netTx REAL NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS metric_alerts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      t INTEGER NOT NULL,
+      kind TEXT NOT NULL,
+      value REAL NOT NULL,
+      threshold REAL NOT NULL,
+      ack INTEGER NOT NULL DEFAULT 0,
+      ackT INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_metric_samples_t ON metric_samples(t);
+    CREATE INDEX IF NOT EXISTS idx_metric_alerts_t ON metric_alerts(t);
   `);
 }
 
@@ -409,6 +429,85 @@ export function saveUserSettings(userId: number, patch: Partial<Settings>): Sett
 export function resetUserSettings(userId: number): Settings {
   db.prepare('DELETE FROM settings WHERE userId = ?').run(userId);
   return getUserSettings(userId);
+}
+
+/* --------------------------- 监控历史与告警 --------------------------- */
+
+export interface MetricSampleRow {
+  t: number;
+  cpu: number;
+  mem: number;
+  disk: number;
+  netRx: number;
+  netTx: number;
+}
+
+export interface MetricAlertRow {
+  id: number;
+  t: number;
+  kind: string;
+  value: number;
+  threshold: number;
+  ack: number;
+  ackT: number | null;
+}
+
+export function insertMetricSample(p: MetricSampleRow): void {
+  db.prepare('INSERT INTO metric_samples (t, cpu, mem, disk, netRx, netTx) VALUES (?, ?, ?, ?, ?, ?)').run(
+    p.t,
+    p.cpu,
+    p.mem,
+    p.disk,
+    p.netRx,
+    p.netTx,
+  );
+}
+
+/** 查询时间窗内的样本，按时间升序 */
+export function queryMetricSamples(since: number, until = Date.now()): MetricSampleRow[] {
+  return db
+    .prepare('SELECT t, cpu, mem, disk, netRx, netTx FROM metric_samples WHERE t >= ? AND t <= ? ORDER BY t ASC')
+    .all(since, until) as MetricSampleRow[];
+}
+
+/** 清理早于指定时间的样本，返回删除行数 */
+export function pruneMetricSamples(beforeT: number): number {
+  return db.prepare('DELETE FROM metric_samples WHERE t < ?').run(beforeT).changes;
+}
+
+export function insertMetricAlert(kind: string, value: number, threshold: number): void {
+  db.prepare('INSERT INTO metric_alerts (t, kind, value, threshold) VALUES (?, ?, ?, ?)').run(
+    Date.now(),
+    kind,
+    value,
+    threshold,
+  );
+}
+
+/** 告警列表，默认未确认优先；onlyUnack 只看未确认 */
+export function listMetricAlerts(limit = 50, onlyUnack = false): MetricAlertRow[] {
+  const sql = onlyUnack
+    ? 'SELECT * FROM metric_alerts WHERE ack = 0 ORDER BY t DESC LIMIT ?'
+    : 'SELECT * FROM metric_alerts ORDER BY t DESC LIMIT ?';
+  return db.prepare(sql).all(limit) as MetricAlertRow[];
+}
+
+export function countUnackAlerts(): number {
+  return (db.prepare('SELECT COUNT(*) AS c FROM metric_alerts WHERE ack = 0').get() as { c: number }).c;
+}
+
+/** 确认告警；id 为空表示全部确认。返回受影响行数 */
+export function ackMetricAlerts(id?: number): number {
+  const now = Date.now();
+  if (typeof id === 'number') {
+    return db.prepare('UPDATE metric_alerts SET ack = 1, ackT = ? WHERE id = ? AND ack = 0').run(now, id).changes;
+  }
+  return db.prepare('UPDATE metric_alerts SET ack = 1, ackT = ? WHERE ack = 0').run(now).changes;
+}
+
+/** 只清理已确认的过期告警，未确认的保留以免漏看 */
+export function pruneMetricAlerts(beforeT: number): number {
+  return db.prepare('DELETE FROM metric_alerts WHERE t < ? AND ack = 1').run(beforeT).changes;
 }
 
 /* ------------------------------ 文件池 ------------------------------ */

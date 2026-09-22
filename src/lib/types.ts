@@ -102,6 +102,17 @@ export interface Settings {
   widgetRssMax: number;
   widgetNotes: boolean;
   widgetNotesText: string;
+
+  /** 监控历史与阈值告警（全局设置，单位见注释） */
+  metricRetentionDays: number;
+  /** 归档落库间隔（秒） */
+  metricArchiveInterval: number;
+  metricAlertEnabled: boolean;
+  metricAlertCpu: number;
+  metricAlertMem: number;
+  metricAlertDisk: number;
+  /** 同类告警冷却时间（分钟），避免持续超阈值刷屏 */
+  metricAlertCooldown: number;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -157,6 +168,14 @@ export const DEFAULT_SETTINGS: Settings = {
   widgetRssMax: 8,
   widgetNotes: false,
   widgetNotesText: '',
+
+  metricRetentionDays: 7,
+  metricArchiveInterval: 60,
+  metricAlertEnabled: false,
+  metricAlertCpu: 90,
+  metricAlertMem: 90,
+  metricAlertDisk: 90,
+  metricAlertCooldown: 30,
 };
 
 export interface UploadedFile {

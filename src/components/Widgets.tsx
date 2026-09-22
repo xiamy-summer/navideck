@@ -43,6 +43,7 @@ function relTime(ms: number, t: (k: string, p?: Record<string, string | number>)
 function SystemCard({ refreshSec }: { refreshSec: number }) {
   const { t } = useI18n();
   const [metrics, setMetrics] = useState<MetricsResult | null>(null);
+  const [unack, setUnack] = useState(0);
   const load = useCallback(async () => {
     try {
       setMetrics(await api.metrics());
@@ -55,6 +56,26 @@ function SystemCard({ refreshSec }: { refreshSec: number }) {
     const timer = setInterval(() => void load(), Math.max(5, refreshSec) * 1000);
     return () => clearInterval(timer);
   }, [load, refreshSec]);
+
+  // 未确认告警数，仅用于卡片角标，60 秒轮询一次
+  useEffect(() => {
+    let alive = true;
+    const loadAlerts = async () => {
+      try {
+        const r = await api.metricsAlerts(1, true);
+        if (alive) setUnack(r.unack);
+      } catch {
+        /* 忽略轮询失败 */
+      }
+    };
+    void loadAlerts();
+    const timer = setInterval(() => void loadAlerts(), 60_000);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
+  }, []);
+
   const cpuHistory = metrics?.history.map((p) => p.cpu) ?? [];
   const memHistory = metrics?.history.map((p) => p.mem) ?? [];
   return (
@@ -62,6 +83,12 @@ function SystemCard({ refreshSec }: { refreshSec: number }) {
       <div className="mb-2 flex items-center gap-1.5">
         <Icon icon="mdi:chip" size={17} title={t('widget.system')} />
         <span className="text-[13px] font-medium">{t('widget.system')}</span>
+        {unack > 0 ? (
+          <span className="chip inline-flex items-center gap-1 text-red-500">
+            <Icon icon="mdi:alert-outline" size={12} title={t('metrics.alerts')} />
+            {unack}
+          </span>
+        ) : null}
         <span className="ml-auto text-[11px] text-muted">
           {metrics ? t('widget.load', { n: metrics.cpu.loadAvg[0] }) : t('common.loading')}
         </span>

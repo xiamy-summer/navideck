@@ -92,6 +92,22 @@ export interface MetricsResult {
   osUptime: number;
 }
 
+export interface MetricAlert {
+  id: number;
+  t: number;
+  kind: 'cpu' | 'mem' | 'disk';
+  value: number;
+  threshold: number;
+  ack: number;
+  ackT: number | null;
+}
+
+export interface MetricsHistoryResult {
+  range: string;
+  total: number;
+  items: MetricPoint[];
+}
+
 export const api = {
   login: (username: string, password: string) =>
     request<User>('/api/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
@@ -167,6 +183,20 @@ export const api = {
   system: () => request<SystemStatus>('/api/system'),
 
   metrics: () => request<MetricsResult>('/api/metrics'),
+
+  metricsHistory: (range: string) =>
+    request<MetricsHistoryResult>(`/api/metrics/history?range=${encodeURIComponent(range)}`),
+
+  metricsAlerts: (limit = 50, onlyUnack = false) =>
+    request<{ items: MetricAlert[]; unack: number }>(
+      `/api/metrics/alerts?limit=${limit}${onlyUnack ? '&unack=1' : ''}`,
+    ),
+
+  ackAlert: (id?: number) =>
+    request<{ changed: number; unack: number }>('/api/metrics/alerts', {
+      method: 'POST',
+      body: JSON.stringify(id === undefined ? { all: true } : { id }),
+    }),
 
   dockerContainers: () => request<DockerListResult>('/api/docker/containers'),
 
