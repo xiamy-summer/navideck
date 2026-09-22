@@ -318,6 +318,15 @@ export const zhCN: Record<string, string> = {
   'common.stop': '停止',
   'common.update': '更新',
   'status.address': '查看地址',
+
+  'home.newItem': '新建站点',
+  'palette.title': '命令面板',
+  'palette.placeholder': '搜索站点或执行操作…',
+  'palette.empty': '无匹配结果',
+  'palette.webSearch': '搜索网页：{q}',
+  'palette.sectionSearch': '搜索',
+  'palette.sectionSites': '站点',
+  'palette.sectionActions': '操作',
 };
 
 export default zhCN;

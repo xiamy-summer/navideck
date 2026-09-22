@@ -318,6 +318,15 @@ export const enUS: Record<string, string> = {
   'common.stop': 'Stop',
   'common.update': 'Update',
   'status.address': 'View address',
+
+  'home.newItem': 'New site',
+  'palette.title': 'Command Palette',
+  'palette.placeholder': 'Search sites or run a command…',
+  'palette.empty': 'No matching results',
+  'palette.webSearch': 'Search the web: {q}',
+  'palette.sectionSearch': 'Search',
+  'palette.sectionSites': 'Sites',
+  'palette.sectionActions': 'Actions',
 };
 
 export default enUS;

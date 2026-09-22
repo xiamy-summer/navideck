@@ -7,6 +7,7 @@ import { Icon } from './Icon';
 import { NavBoard } from './NavBoard';
 import { SearchBar } from './SearchBar';
 import { WebModal } from './WebModal';
+import { CommandPalette } from './CommandPalette';
 import { Widgets } from './Widgets';
 import { ConfirmDialog, emptyItemDraft, GroupDialog, ItemDialog, itemToDraft, type ItemDraft } from './Dialogs';
 import type { Group, Item, NetMode, Settings, ThemeMode, User } from '@/lib/types';
@@ -42,6 +43,7 @@ export function HomeView({
   const [toast, setToast] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [pwForm, setPwForm] = useState<{ oldPassword: string; newPassword: string } | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   const allItems = useMemo(() => groups.flatMap((g) => g.items), [groups]);
 
@@ -50,6 +52,18 @@ export function HomeView({
     const timer = setTimeout(() => setToast(null), 2400);
     return () => clearTimeout(timer);
   }, [toast]);
+
+  // 全局命令面板快捷键：Ctrl/Cmd + K
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem('nas-nav-theme') as ThemeMode | null;
@@ -216,6 +230,15 @@ export function HomeView({
 
           <button className="btn btn-ghost" onClick={() => router.push('/settings')} title={t('home.settings')}>
             <Icon icon="mdi:cog-outline" size={19} title={t('home.settings')} />
+          </button>
+
+          <button
+            className="btn btn-ghost hidden sm:inline-flex"
+            onClick={() => setPaletteOpen(true)}
+            title={t('palette.title')}
+          >
+            <Icon icon="mdi:console-line" size={18} title={t('palette.title')} />
+            <kbd className="ml-1 rounded border border-line px-1 text-[11px] text-muted">⌘K</kbd>
           </button>
 
           <div className="relative">
@@ -457,6 +480,30 @@ export function HomeView({
       ) : null}
 
       <WebModal url={modal?.url ?? null} title={modal?.title} onClose={() => setModal(null)} />
+
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        user={user}
+        items={allItems}
+        groups={groups}
+        settings={settings}
+        netMode={netMode}
+        actions={{
+          openItem,
+          cycleTheme,
+          switchNet,
+          toggleEdit: () => setEditMode((v) => !v),
+          newGroup: () => setPending({ kind: 'group', draft: { name: '', icon: 'mdi:folder-outline' } }),
+          newItem: () => setPending({ kind: 'item', draft: emptyItemDraft(groups[0]?.id ?? 0) }),
+          goSettings: () => router.push('/settings'),
+          goLogin: () => router.push('/login'),
+          logout: async () => {
+            await api.logout();
+            window.location.reload();
+          },
+        }}
+      />
 
       {toast ? (
         <div className="pointer-events-none fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-xl border border-line bg-surface px-4 py-2 text-[13px] shadow-card">
