@@ -23,6 +23,8 @@ BRANCH = 'main'
 
 SKIP_DIRS = {'node_modules', '.next', '.data', '.git', '.workbuddy', 'logs'}
 SKIP_FILES = {'.DS_Store', '.navideck.pid', 'next-env.d.ts'}
+# 这些后缀的文件视为构建产物，绝不进入仓库；远端若残留则一并删除
+SKIP_SUFFIXES = ('.zip', '.tsbuildinfo')
 API = f'https://api.github.com/repos/{REPO}'
 HEADERS = {
     'Authorization': f'Bearer {TOKEN}',
@@ -53,7 +55,7 @@ def collect():
     for dirpath, dirnames, filenames in os.walk(ROOT):
         dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
         for name in filenames:
-            if name in SKIP_FILES or name.endswith('.zip'):
+            if name in SKIP_FILES or name.endswith(SKIP_SUFFIXES):
                 continue
             full = os.path.join(dirpath, name)
             rel = os.path.relpath(full, ROOT).replace(os.sep, '/')
@@ -90,6 +92,13 @@ def main():
         blob = call('/git/blobs', {'content': base64.b64encode(raw).decode(), 'encoding': 'base64'})
         entries.append({'path': path, 'mode': '100644', 'type': 'blob', 'sha': blob['sha']})
         changed.append(path)
+
+    # 清理远端残留的构建产物（本地已忽略或不再存在）：用 sha:null 显式删除
+    for path, sha in remote.items():
+        base = path.rsplit('/', 1)[-1]
+        if (base in SKIP_FILES or base.endswith(SKIP_SUFFIXES)) and path not in local:
+            entries.append({'path': path, 'mode': '100644', 'type': 'blob', 'sha': None})
+            changed.append(path + '  (delete)')
 
     if not entries:
         print('远端已是最新，无需同步')
