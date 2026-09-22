@@ -83,6 +83,9 @@ export interface Settings {
   /** 是否允许未登录访客浏览访客账号的内容 */
   guestEnabled: boolean;
 
+  /** 数据自动备份周期（小时），0 表示关闭 */
+  backupInterval: number;
+
   /** 首页信息小组件 */
   widgetsEnabled: boolean;
   widgetPosition: 'top' | 'bottom';
@@ -127,6 +130,8 @@ export const DEFAULT_SETTINGS: Settings = {
 
   dockerEnabled: true,
   guestEnabled: true,
+
+  backupInterval: 0,
 
   widgetsEnabled: true,
   widgetPosition: 'top',

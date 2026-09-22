@@ -16,17 +16,20 @@ import {
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), '.data');
 const UPLOAD_DIR = path.join(DATA_DIR, 'uploads');
+const BACKUP_DIR = path.join(DATA_DIR, 'backups');
+const LAST_BACKUP_FILE = path.join(DATA_DIR, '.lastbackup');
 
-function createConnection() {
+function createConnection(): Database.Database {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-  const db = new Database(path.join(DATA_DIR, 'nav.db'));
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
+  const conn = new Database(path.join(DATA_DIR, 'nav.db'));
+  conn.pragma('journal_mode = WAL');
+  conn.pragma('foreign_keys = ON');
   // 构建期多个 worker 会并发打开同一个库，等待而不是直接抛 SQLITE_BUSY
-  db.pragma('busy_timeout = 8000');
-  migrate(db);
-  return db;
+  conn.pragma('busy_timeout = 8000');
+  migrate(conn);
+  globalForDb.__navDb = conn;
+  return conn;
 }
 
 function migrate(db: Database.Database) {
@@ -88,8 +91,38 @@ function migrate(db: Database.Database) {
 
 const globalForDb = globalThis as unknown as { __navDb?: Database.Database };
 
-export const db: Database.Database = globalForDb.__navDb ?? createConnection();
-if (process.env.NODE_ENV !== 'production') globalForDb.__navDb = db;
+/**
+ * 懒加载数据库连接：首次访问时才真正打开文件。
+ * 这样 `next build` 的页面数据收集阶段（多个 worker 并发导入模块）不会触碰磁盘文件，
+ * 避免构建期 SQLITE_BUSY；运行时首次请求才创建连接。
+ */
+function getDbConnection(): Database.Database {
+  if (!globalForDb.__navDb) createConnection();
+  return globalForDb.__navDb!;
+}
+
+export let db: Database.Database = new Proxy({} as Database.Database, {
+  get(_t, prop) {
+    const conn = getDbConnection();
+    const v = (conn as unknown as Record<PropertyKey, unknown>)[prop];
+    return typeof v === 'function' ? (v as (...a: unknown[]) => unknown).bind(conn) : v;
+  },
+  set(_t, prop, value) {
+    (getDbConnection() as unknown as Record<PropertyKey, unknown>)[prop] = value;
+    return true;
+  },
+});
+
+/** 关闭并重新打开数据库连接（用于备份恢复后热加载） */
+export function reloadDatabase() {
+  try {
+    db.close();
+  } catch {
+    /* 忽略关闭异常 */
+  }
+  // 丢弃代理，重新指向一个真实连接
+  db = createConnection();
+}
 
 /* ------------------------------ 密码 ------------------------------ */
 
@@ -414,4 +447,129 @@ export function deleteFile(userId: number, id: number): UploadedFile | null {
   return row;
 }
 
-export { UPLOAD_DIR, DATA_DIR };
+/* ------------------------------ 数据备份 ------------------------------ */
+
+export interface BackupInfo {
+  name: string;
+  size: number;
+  createdAt: number;
+}
+
+export function listBackups(): BackupInfo[] {
+  if (!fs.existsSync(BACKUP_DIR)) return [];
+  return fs
+    .readdirSync(BACKUP_DIR)
+    .filter((f) => f.startsWith('nav-') && f.endsWith('.db'))
+    .map((f) => {
+      const stat = fs.statSync(path.join(BACKUP_DIR, f));
+      // 文件名格式 nav-YYYYMMDDHHMMSS.db（14 位时间戳）
+      const stamp = f.slice(4, 18);
+      const createdAt = Number.isFinite(Number(stamp))
+        ? new Date(
+            `${stamp.slice(0, 4)}-${stamp.slice(4, 6)}-${stamp.slice(6, 8)}T${stamp.slice(8, 10)}:${stamp.slice(
+              10,
+              12,
+            )}:${stamp.slice(12, 14)}`,
+          ).getTime()
+        : stat.mtimeMs;
+      return { name: f, size: stat.size, createdAt: Number.isFinite(createdAt) ? createdAt : stat.mtimeMs };
+    })
+    .sort((a, b) => b.createdAt - a.createdAt);
+}
+
+/** 立即对 nav.db 做一次快照（先 checkpoint 保证数据落盘） */
+export function createBackup(): BackupInfo {
+  fs.mkdirSync(BACKUP_DIR, { recursive: true });
+  try {
+    db.pragma('wal_checkpoint(TRUNCATE)');
+  } catch {
+    /* 忽略 */
+  }
+  const d = new Date();
+  const p2 = (n: number) => String(n).padStart(2, '0');
+  const stamp = `${d.getFullYear()}${p2(d.getMonth() + 1)}${p2(d.getDate())}${p2(d.getHours())}${p2(
+    d.getMinutes(),
+  )}${p2(d.getSeconds())}`;
+  const dest = path.join(BACKUP_DIR, `nav-${stamp}.db`);
+  fs.copyFileSync(path.join(DATA_DIR, 'nav.db'), dest);
+  const stat = fs.statSync(dest);
+  writeLastBackup(Date.now());
+  return { name: path.basename(dest), size: stat.size, createdAt: Date.now() };
+}
+
+export function deleteBackup(name: string): boolean {
+  const safe = path.basename(name);
+  if (!safe.startsWith('nav-') || !safe.endsWith('.db')) return false;
+  const p = path.join(BACKUP_DIR, safe);
+  if (!fs.existsSync(p)) return false;
+  fs.unlinkSync(p);
+  return true;
+}
+
+/** 从备份恢复：覆盖 nav.db 后热重载连接 */
+export function restoreBackup(name: string): boolean {
+  const safe = path.basename(name);
+  if (!safe.startsWith('nav-') || !safe.endsWith('.db')) return false;
+  const src = path.join(BACKUP_DIR, safe);
+  if (!fs.existsSync(src)) return false;
+  fs.copyFileSync(src, path.join(DATA_DIR, 'nav.db'));
+  // 清除旧的 WAL/SHM，避免与新库状态冲突
+  for (const ext of ['-wal', '-shm']) {
+    try {
+      fs.unlinkSync(path.join(DATA_DIR, `nav.db${ext}`));
+    } catch {
+      /* 不存在则忽略 */
+    }
+  }
+  reloadDatabase();
+  return true;
+}
+
+function readLastBackup(): number {
+  try {
+    return Number(fs.readFileSync(LAST_BACKUP_FILE, 'utf8').trim()) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+function writeLastBackup(ts: number) {
+  try {
+    fs.writeFileSync(LAST_BACKUP_FILE, String(ts));
+  } catch {
+    /* 忽略 */
+  }
+}
+
+/** 定时自动备份：按全局设置 backupInterval（小时）周期执行，模块加载时启动一次 */
+export function startBackupScheduler() {
+  const g = globalThis as unknown as { __navBackupTimer?: ReturnType<typeof setInterval> };
+  if (g.__navBackupTimer) return;
+  g.__navBackupTimer = setInterval(
+    () => {
+      try {
+        const interval = getGlobalSettings().backupInterval;
+        if (!interval || interval <= 0) return;
+        const last = readLastBackup();
+        const due = Date.now() - last >= interval * 3600 * 1000;
+        if (due) createBackup();
+      } catch {
+        /* 静默失败，下次重试 */
+      }
+    },
+    60 * 1000,
+  );
+  // 不阻止进程退出
+  if (typeof g.__navBackupTimer.unref === 'function') g.__navBackupTimer.unref();
+}
+
+// 服务端启动时尝试开启自动备份调度
+if (typeof setInterval !== 'undefined') {
+  try {
+    startBackupScheduler();
+  } catch {
+    /* 忽略 */
+  }
+}
+
+export { UPLOAD_DIR, DATA_DIR, BACKUP_DIR };

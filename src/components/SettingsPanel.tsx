@@ -542,6 +542,10 @@ function DataTab({
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const fileInput = useRef<HTMLInputElement>(null);
   const importInput = useRef<HTMLInputElement>(null);
+  const bookmarkInput = useRef<HTMLInputElement>(null);
+  const [backups, setBackups] = useState<Array<{ name: string; size: number; createdAt: number }>>([]);
+  const [busy, setBusy] = useState(false);
+  const [bookmarkMode, setBookmarkMode] = useState<'replace' | 'append'>('append');
   const query = as ? `?as=${as}` : '';
 
   const loadFiles = async () => {
@@ -549,6 +553,28 @@ function DataTab({
       setFiles(await api.listFiles(as ?? undefined));
     } catch {
       /* 忽略 */
+    }
+  };
+
+  const loadBackups = async () => {
+    try {
+      setBackups((await api.backupList()).backups);
+    } catch {
+      /* 忽略 */
+    }
+  };
+
+  useEffect(() => {
+    void loadBackups();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [as]);
+
+  const doImportBookmarks = async (file: File, mode: 'replace' | 'append') => {
+    try {
+      const res = await api.importBookmarks(file, mode, as ?? undefined);
+      toast(t('data.imported', { g: res.groupCount, i: res.itemCount }));
+    } catch (err) {
+      toast(err instanceof Error ? err.message : t('data.importFailed'));
     }
   };
 
@@ -612,6 +638,133 @@ function DataTab({
           }}
         />
         <p className="mt-2 text-[12px] text-muted">{t('data.tip')}</p>
+      </div>
+
+      <div className="border-t border-line pt-5">
+        <h3 className="mb-2 text-[14px] font-medium">{t('data.bookmarks')}</h3>
+        <div className="flex flex-wrap gap-2">
+          <button
+            className="btn"
+            onClick={() => {
+              setBookmarkMode('append');
+              bookmarkInput.current?.click();
+            }}
+          >
+            <Icon icon="mdi:bookmark-outline" size={17} title={t('data.importBookmarks')} />
+            {t('data.importBookmarks')}
+          </button>
+          <button
+            className="btn"
+            onClick={() => {
+              if (confirm(t('data.importConfirm'))) {
+                setBookmarkMode('replace');
+                bookmarkInput.current?.click();
+              }
+            }}
+          >
+            {t('data.bookmarksReplace')}
+          </button>
+        </div>
+        <input
+          ref={bookmarkInput}
+          type="file"
+          accept=".html,text/html"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void doImportBookmarks(file, bookmarkMode);
+            e.target.value = '';
+          }}
+        />
+        <p className="mt-2 text-[12px] text-muted">{t('data.importBookmarksTip')}</p>
+      </div>
+
+      <div className="border-t border-line pt-5">
+        <h3 className="mb-2 text-[14px] font-medium">{t('data.backupManage')}</h3>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            className="btn"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                await api.backupNow();
+                await loadBackups();
+                toast(t('data.backupCreated'));
+              } catch {
+                toast(t('data.backupFailed'));
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            <Icon icon="mdi:backup-restore" size={17} title={t('data.backupNow')} />
+            {t('data.backupNow')}
+          </button>
+          <Row label={t('data.backupInterval')} hint={t('data.backupIntervalHint')}>
+            <input
+              type="number"
+              min={0}
+              max={8760}
+              className="field w-24"
+              value={settings.backupInterval}
+              onChange={(e) => onSave({ backupInterval: Number(e.target.value) })}
+            />
+          </Row>
+        </div>
+        {backups.length === 0 ? (
+          <p className="mt-3 text-[13px] text-muted">{t('data.noBackups')}</p>
+        ) : (
+          <div className="mt-3 space-y-2">
+            {backups.map((b) => (
+              <div
+                key={b.name}
+                className="flex flex-wrap items-center gap-2 rounded-xl border border-line p-2 text-[13px]"
+              >
+                <Icon icon="mdi:database-outline" size={18} title={t('data.backupManage')} />
+                <span className="max-w-[200px] truncate">{b.name}</span>
+                <span className="text-[12px] text-muted">{(b.size / 1024).toFixed(1)} KB</span>
+                <span className="text-[12px] text-muted">{new Date(b.createdAt).toLocaleString()}</span>
+                <a
+                  className="btn btn-ghost ml-auto"
+                  href={`/api/backup/download?name=${encodeURIComponent(b.name)}${query}`}
+                  download
+                >
+                  {t('common.download')}
+                </a>
+                <button
+                  className="btn btn-ghost"
+                  onClick={async () => {
+                    if (!confirm(t('data.restoreConfirm'))) return;
+                    try {
+                      await api.backupRestore(b.name);
+                      toast(t('data.restored'));
+                      window.location.reload();
+                    } catch (err) {
+                      toast(err instanceof Error ? err.message : t('data.backupFailed'));
+                    }
+                  }}
+                >
+                  {t('data.restore')}
+                </button>
+                <button
+                  className="btn btn-ghost text-red-500"
+                  onClick={async () => {
+                    try {
+                      await api.backupDelete(b.name);
+                      setBackups(backups.filter((x) => x.name !== b.name));
+                      toast(t('data.backupDeleted'));
+                    } catch {
+                      toast(t('data.backupFailed'));
+                    }
+                  }}
+                >
+                  <Icon icon="mdi:trash-can-outline" size={17} title={t('common.delete')} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="border-t border-line pt-5">
