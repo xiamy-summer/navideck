@@ -8,8 +8,19 @@ import { DockerPanel } from './DockerPanel';
 import { MetricsPanel } from './MetricsPanel';
 import type { Role, SearchEngine, Settings, UploadedFile, User } from '@/lib/types';
 import { useI18n, LANGS, type Lang } from '@/i18n';
+import { APP_VERSION } from '@/lib/version';
 
-type Tab = 'appearance' | 'search' | 'custom' | 'data' | 'users' | 'status' | 'docker' | 'metrics' | 'about';
+type Tab =
+  | 'appearance'
+  | 'search'
+  | 'custom'
+  | 'data'
+  | 'users'
+  | 'status'
+  | 'docker'
+  | 'metrics'
+  | 'oidc'
+  | 'about';
 
 const TABS: Array<{ id: Tab; icon: string; adminOnly?: boolean }> = [
   { id: 'appearance', icon: 'mdi:palette-outline' },
@@ -20,6 +31,7 @@ const TABS: Array<{ id: Tab; icon: string; adminOnly?: boolean }> = [
   { id: 'status', icon: 'mdi:chart-box-outline' },
   { id: 'docker', icon: 'mdi:docker', adminOnly: true },
   { id: 'metrics', icon: 'mdi:chart-line' },
+  { id: 'oidc', icon: 'mdi:shield-key-outline', adminOnly: true },
   { id: 'about', icon: 'mdi:information-outline' },
 ];
 
@@ -138,6 +150,7 @@ export function SettingsPanel({ user, initialSettings, users: initialUsers }: Pr
         {tab === 'status' ? <StatusTab /> : null}
         {tab === 'docker' && isAdmin ? <DockerPanel toast={setToast} /> : null}
         {tab === 'metrics' ? <MetricsPanel /> : null}
+        {tab === 'oidc' && isAdmin ? <OidcTab settings={settings} onSave={save} /> : null}
         {tab === 'about' ? <AboutTab /> : null}
       </div>
 
@@ -1240,7 +1253,7 @@ function AboutTab() {
   const { t } = useI18n();
   return (
     <div className="space-y-3 text-[13px] leading-relaxed">
-      <p className="font-medium">{t('about.version', { version: '0.1.0' })}</p>
+      <p className="font-medium">{t('about.version', { version: APP_VERSION })}</p>
       <p className="text-muted">{t('about.desc')}</p>
       <ul className="list-inside list-disc space-y-1 text-muted">
         <li>{t('about.featureStorage')}</li>
@@ -1248,6 +1261,130 @@ function AboutTab() {
         <li>{t('about.featureIcon')}</li>
         <li>{t('about.featureNext')}</li>
       </ul>
+    </div>
+  );
+}
+
+/** 与 api/settings 的 SECRET_MASK 保持一致：收到它就代表密钥已保存 */
+const OIDC_SECRET_MASK = '__set__';
+
+function OidcTab({ settings, onSave }: { settings: Settings; onSave: (p: Partial<Settings>) => void }) {
+  const { t } = useI18n();
+  const [secret, setSecret] = useState('');
+  const [callback, setCallback] = useState('/api/auth/oidc/callback');
+  const secretSaved = settings.oidcClientSecret === OIDC_SECRET_MASK;
+
+  useEffect(() => {
+    setCallback(`${window.location.origin}/api/auth/oidc/callback`);
+  }, []);
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <h3 className="text-[14px] font-medium">{t('oidc.title')}</h3>
+        <p className="mt-1 text-[12px] text-muted">{t('oidc.hint')}</p>
+      </div>
+
+      <div className="rounded-xl border border-line p-3 text-[12px] text-muted">
+        <span>{t('oidc.callbackHint')}</span>
+        <code className="ml-1 break-all text-[12px]">{callback}</code>
+      </div>
+
+      <Row label={t('oidc.enabled')} hint={t('oidc.enabledHint')}>
+        <Switch value={settings.oidcEnabled} onChange={(v) => onSave({ oidcEnabled: v })} />
+      </Row>
+
+      <Row label={t('oidc.issuer')} hint={t('oidc.issuerHint')}>
+        <input
+          className="field w-full"
+          placeholder="https://auth.example.com"
+          value={settings.oidcIssuer}
+          onChange={(e) => onSave({ oidcIssuer: e.target.value.trim() })}
+        />
+      </Row>
+
+      <Row label={t('oidc.clientId')} hint={t('oidc.clientIdHint')}>
+        <input
+          className="field w-full"
+          value={settings.oidcClientId}
+          onChange={(e) => onSave({ oidcClientId: e.target.value.trim() })}
+        />
+      </Row>
+
+      <Row
+        label={t('oidc.clientSecret')}
+        hint={secretSaved ? t('oidc.secretSaved') : t('oidc.secretHint')}
+      >
+        <input
+          className="field w-full"
+          type="password"
+          autoComplete="off"
+          placeholder={secretSaved ? t('oidc.secretSaved') : t('oidc.secretHint')}
+          value={secret}
+          onChange={(e) => setSecret(e.target.value)}
+          onBlur={() => {
+            if (secret.trim()) onSave({ oidcClientSecret: secret.trim() });
+            setSecret('');
+          }}
+        />
+      </Row>
+
+      <Row label={t('oidc.redirectUri')} hint={t('oidc.redirectUriHint')}>
+        <input
+          className="field w-full"
+          placeholder={callback}
+          value={settings.oidcRedirectUri}
+          onChange={(e) => onSave({ oidcRedirectUri: e.target.value.trim() })}
+        />
+      </Row>
+
+      <Row label={t('oidc.scopes')} hint={t('oidc.scopesHint')}>
+        <input
+          className="field w-full"
+          value={settings.oidcScopes}
+          onChange={(e) => onSave({ oidcScopes: e.target.value })}
+        />
+      </Row>
+
+      <Row label={t('oidc.defaultRole')} hint={t('oidc.defaultRoleHint')}>
+        <select
+          className="field w-40"
+          value={settings.oidcDefaultRole || 'user'}
+          onChange={(e) => onSave({ oidcDefaultRole: e.target.value })}
+        >
+          <option value="user">{t('oidc.roleUser')}</option>
+          <option value="admin">{t('oidc.roleAdmin')}</option>
+        </select>
+      </Row>
+
+      <div className="border-t border-line pt-3">
+        <p className="mb-2 text-[12px] text-muted">{t('oidc.adminRuleHint')}</p>
+        <Row label={t('oidc.adminClaim')} hint={t('oidc.adminClaimHint')}>
+          <input
+            className="field w-full"
+            placeholder="groups"
+            value={settings.oidcAdminClaim}
+            onChange={(e) => onSave({ oidcAdminClaim: e.target.value.trim() })}
+          />
+        </Row>
+        <Row label={t('oidc.adminValue')} hint={t('oidc.adminValueHint')}>
+          <input
+            className="field w-full"
+            placeholder="navideck-admins"
+            value={settings.oidcAdminValue}
+            onChange={(e) => onSave({ oidcAdminValue: e.target.value.trim() })}
+          />
+        </Row>
+      </div>
+
+      <Row label={t('oidc.buttonLabel')} hint={t('oidc.buttonLabelHint')}>
+        <input
+          className="field w-full"
+          placeholder={t('login.sso')}
+          value={settings.oidcButtonLabel}
+          onChange={(e) => onSave({ oidcButtonLabel: e.target.value })}
+        />
+      </Row>
     </div>
   );
 }

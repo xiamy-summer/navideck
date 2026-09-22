@@ -3,10 +3,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { db, DATA_DIR, countUsers } from '@/lib/db';
 import { fail, handle, ok, resolveTarget } from '@/lib/api';
+import { APP_VERSION } from '@/lib/version';
 
 export const dynamic = 'force-dynamic';
 
-const VERSION = '0.1.0';
+const VERSION = APP_VERSION;
 
 export async function GET(req: Request) {
   return handle(async () => {

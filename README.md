@@ -35,6 +35,12 @@
 采用授权码 + PKCE 流程，ID Token 经 JWKS 验证。启用后登录页出现「单点登录」按钮，与账号密码登录并存；
 首次通过 OIDC 登录会自动建档（默认角色 `user`，可由 `OIDC_DEFAULT_ROLE` 调整）。
 
+### 推荐：在界面里配置
+
+管理员进入「设置中心 → 单点登录」，把右上角目标切换为**全局**，然后填写 Issuer、Client ID、Client Secret 等，保存后立即生效。页面会直接给出需要填入 IdP 的回调地址；`Client Secret` 只保存、不回显。
+
+### 也可以：用环境变量（界面留空时自动回落）
+
 在 `docker-compose.yml` 或 `.env` 中配置：
 
 | 变量 | 说明 |

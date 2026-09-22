@@ -136,6 +136,20 @@ export interface Settings {
   metricAlertDisk: number;
   /** 同类告警冷却时间（分钟），避免持续超阈值刷屏 */
   metricAlertCooldown: number;
+
+  /** OIDC 单点登录（全局设置；留空字段会回落到同名环境变量） */
+  oidcEnabled: boolean;
+  oidcIssuer: string;
+  oidcClientId: string;
+  oidcClientSecret: string;
+  /** 留空则自动推导为 <站点地址>/api/auth/oidc/callback */
+  oidcRedirectUri: string;
+  oidcScopes: string;
+  oidcDefaultRole: string;
+  oidcAdminClaim: string;
+  oidcAdminValue: string;
+  /** 登录页按钮文案，留空则使用界面语言的默认文案 */
+  oidcButtonLabel: string;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -199,6 +213,17 @@ export const DEFAULT_SETTINGS: Settings = {
   metricAlertMem: 90,
   metricAlertDisk: 90,
   metricAlertCooldown: 30,
+
+  oidcEnabled: false,
+  oidcIssuer: '',
+  oidcClientId: '',
+  oidcClientSecret: '',
+  oidcRedirectUri: '',
+  oidcScopes: 'openid email profile',
+  oidcDefaultRole: '',
+  oidcAdminClaim: '',
+  oidcAdminValue: '',
+  oidcButtonLabel: '',
 };
 
 export interface UploadedFile {

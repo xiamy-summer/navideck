@@ -4,14 +4,21 @@ import type { Settings } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
+/** 已保存密钥的占位符：前端收到即代表「密钥已配置」，原样回传时不会覆盖真实值 */
+const SECRET_MASK = '__set__';
+
+function maskSecret(settings: Settings): Settings {
+  return { ...settings, oidcClientSecret: settings.oidcClientSecret ? SECRET_MASK : '' };
+}
+
 export async function GET(req: Request) {
   return handle(async () => {
     const target = await resolveTarget(req);
     if (new URL(req.url).searchParams.get('global') === '1') {
       if (target.actor?.role !== 'admin') return fail('需要管理员权限', 403);
-      return ok(getGlobalSettings());
+      return ok(maskSecret(getGlobalSettings()));
     }
-    return ok(getUserSettings(target.owner.id));
+    return ok(maskSecret(getUserSettings(target.owner.id)));
   });
 }
 
@@ -20,12 +27,15 @@ export async function PUT(req: Request) {
     const target = await resolveTarget(req);
     requireWrite(target);
     const body = await readJson<Partial<Settings>>(req);
+    const patch: Partial<Settings> = { ...body };
+    // 占位符表示不修改密钥，直接丢弃该字段
+    if (patch.oidcClientSecret === SECRET_MASK) delete patch.oidcClientSecret;
     const url = new URL(req.url);
     const isGlobal = url.searchParams.get('global') === '1';
     if (isGlobal) {
       if (target.actor?.role !== 'admin') return fail('需要管理员权限', 403);
-      return ok(saveUserSettings(0, body));
+      return ok(saveUserSettings(0, patch));
     }
-    return ok(saveUserSettings(target.owner.id, body));
+    return ok(saveUserSettings(target.owner.id, patch));
   });
 }

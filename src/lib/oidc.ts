@@ -1,5 +1,7 @@
 import crypto from 'node:crypto';
 import { jwtVerify, createRemoteJWKSet, type JWTPayload } from 'jose';
+import { getGlobalSettings } from '@/lib/db';
+import type { Settings } from './types';
 
 export interface OidcConfig {
   enabled: boolean;
@@ -16,24 +18,42 @@ export interface OidcConfig {
 
 let cachedDiscovery: { ts: number; doc: Record<string, unknown> } | null = null;
 
-/** 读取并校验 OIDC 配置；未启用或缺失关键项时返回 null */
+/**
+ * 读取并校验 OIDC 配置；未启用或缺失关键项时返回 null。
+ * 取值顺序：全局设置（数据库）优先，字段留空才回落到同名环境变量，
+ * 这样纯 docker-compose 部署的老配置不会失效。
+ */
 export function getOidcConfig(overrideRedirectUri?: string): OidcConfig | null {
-  if (process.env.OIDC_ENABLED !== 'true') return null;
-  const issuer = (process.env.OIDC_ISSUER || '').replace(/\/$/, '');
-  const clientId = process.env.OIDC_CLIENT_ID || '';
-  const clientSecret = process.env.OIDC_CLIENT_SECRET || '';
-  if (!issuer || !clientId) return null;
+  let s: Settings | null = null;
+  try {
+    s = getGlobalSettings();
+  } catch {
+    s = null;
+  }
+
+  const issuer = (s?.oidcIssuer || process.env.OIDC_ISSUER || '').replace(/\/$/, '');
+  const clientId = s?.oidcClientId || process.env.OIDC_CLIENT_ID || '';
+  const clientSecret = s?.oidcClientSecret || process.env.OIDC_CLIENT_SECRET || '';
+
+  // 数据库里已填写 issuer 或 clientId 时，以数据库开关为准；否则沿用环境变量开关
+  const configuredInDb = Boolean(s?.oidcIssuer || s?.oidcClientId);
+  const enabled = configuredInDb
+    ? Boolean(s?.oidcEnabled)
+    : Boolean(s?.oidcEnabled) || process.env.OIDC_ENABLED === 'true';
+
+  if (!enabled || !issuer || !clientId) return null;
+
   return {
     enabled: true,
     issuer,
     clientId,
     clientSecret,
-    redirectUri: overrideRedirectUri || process.env.OIDC_REDIRECT_URI || '',
-    scopes: process.env.OIDC_SCOPES || 'openid email profile',
-    defaultRole: (process.env.OIDC_DEFAULT_ROLE as 'user' | 'admin') === 'admin' ? 'admin' : 'user',
-    adminClaim: process.env.OIDC_ADMIN_CLAIM || '',
-    adminValue: process.env.OIDC_ADMIN_VALUE || '',
-    buttonLabel: process.env.OIDC_BUTTON_LABEL || 'SSO',
+    redirectUri: overrideRedirectUri || s?.oidcRedirectUri || process.env.OIDC_REDIRECT_URI || '',
+    scopes: s?.oidcScopes || process.env.OIDC_SCOPES || 'openid email profile',
+    defaultRole: (s?.oidcDefaultRole || process.env.OIDC_DEFAULT_ROLE) === 'admin' ? 'admin' : 'user',
+    adminClaim: s?.oidcAdminClaim || process.env.OIDC_ADMIN_CLAIM || '',
+    adminValue: s?.oidcAdminValue || process.env.OIDC_ADMIN_VALUE || '',
+    buttonLabel: s?.oidcButtonLabel || process.env.OIDC_BUTTON_LABEL || '',
   };
 }
 
