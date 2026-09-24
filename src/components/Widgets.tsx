@@ -126,6 +126,12 @@ function DockerCard({ refreshSec }: { refreshSec: number }) {
     const timer = setInterval(() => void load(), Math.max(5, refreshSec) * 1000);
     return () => clearInterval(timer);
   }, [load, refreshSec]);
+
+  // 首页只需要知道「有没有异常」，不铺进程清单：
+  // 全部运行时只留一行状态；只有未运行的容器才值得列出来（最多 4 个）
+  const runningCount = docker?.available ? docker.containers.filter((c) => c.state === 'running').length : 0;
+  const stoppedContainers = docker?.available ? docker.containers.filter((c) => c.state !== 'running') : [];
+
   return (
     <div className="card p-4">
       <div className="mb-2 flex items-center gap-1.5">
@@ -145,17 +151,29 @@ function DockerCard({ refreshSec }: { refreshSec: number }) {
         <p className="py-2 text-[12px] text-muted">{t('widget.dockerNoSocket', { socket: docker.socket })}</p>
       ) : docker.containers.length === 0 ? (
         <p className="py-4 text-[12px] text-muted">{t('widget.noContainers')}</p>
+      ) : stoppedContainers.length === 0 ? (
+        <div className="flex items-center gap-2 py-1 text-[12px]">
+          <span className="dot-run dot-pulse h-2 w-2 flex-none rounded-full" />
+          <span className="text-muted">{t('widget.allRunning', { n: runningCount })}</span>
+        </div>
       ) : (
         <div className="space-y-1">
-          {docker.containers.slice(0, 5).map((c) => (
+          <div className="flex items-center gap-2 text-[12px]">
+            <span className="dot-run h-2 w-2 flex-none rounded-full" />
+            <span className="text-muted">{t('widget.runningCount', { n: runningCount })}</span>
+            <span className="ml-auto flex-none text-[11px] text-amber-600 dark:text-amber-400">
+              {t('widget.stoppedCount', { n: stoppedContainers.length })}
+            </span>
+          </div>
+          {stoppedContainers.slice(0, 4).map((c) => (
             <div key={c.id} className="flex items-center gap-2 text-[12px]">
-              <span className="h-2 w-2 flex-none rounded-full" style={{ background: c.state === 'running' ? '#22c55e' : '#94a3b8' }} />
+              <span className="dot-warn h-2 w-2 flex-none rounded-full" />
               <span className="truncate">{c.name}</span>
               <span className="ml-auto flex-none text-[11px] text-muted">{c.status}</span>
             </div>
           ))}
-          {docker.containers.length > 5 ? (
-            <div className="text-[11px] text-muted">{t('widget.moreContainers', { n: docker.containers.length - 5 })}</div>
+          {stoppedContainers.length > 4 ? (
+            <div className="text-[11px] text-muted">{t('widget.moreContainers', { n: stoppedContainers.length - 4 })}</div>
           ) : null}
         </div>
       )}
