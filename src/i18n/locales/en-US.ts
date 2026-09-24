@@ -167,6 +167,12 @@ export const enUS: Record<string, string> = {
   'data.bookmarks': 'Browser Bookmarks',
   'data.importBookmarks': 'Import Bookmarks',
   'data.importBookmarksTip': 'Supports HTML bookmarks exported from Chrome / Edge / Firefox. Folders become groups automatically.',
+  'data.sunPanel': 'Sun-Panel Config',
+  'data.importSunPanel': 'Import config',
+  'data.sunPanelReplace': 'Import (Replace)',
+  'data.importSunPanelTip':
+    'Supports the JSON config exported from Sun-Panel. Groups, WAN / LAN URLs, descriptions and icons are mapped automatically; the linked container name is stored so home cards can show its running state.',
+  'data.sunPanelIcons': 'with {n} icons',
   'data.bookmarksReplace': 'Import (Replace)',
   'data.backupManage': 'Backup Manager',
   'data.backupNow': 'Backup Now',

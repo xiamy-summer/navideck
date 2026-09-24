@@ -46,6 +46,8 @@ interface Props {
  */
 export function Icon({ icon, size = 24, className, title }: Props) {
   const valid = !!icon && icon.includes(':');
+  // 图片地址（Sun-Panel 等第三方导入的自定义图标）不走 Iconify，直接按 <img> 渲染
+  const isImage = !!icon && /^(https?:\/\/|data:image\/)/i.test(icon);
   const [packReady, setPackReady] = useState(false);
   const [onlineFailed, setOnlineFailed] = useState(false);
 
@@ -87,6 +89,25 @@ export function Icon({ icon, size = 24, className, title }: Props) {
       alive = false;
     };
   }, [icon, valid, packReady]);
+
+  // 0) 图片地址 → 直接 <img>（用于第三方导入的自定义 logo）
+  if (isImage) {
+    return (
+      <img
+        src={icon as string}
+        alt={title || ''}
+        className={className}
+        style={{
+          width: size,
+          height: size,
+          objectFit: 'contain',
+          borderRadius: Math.round(size * 0.22),
+          flex: 'none',
+          display: 'inline-block',
+        }}
+      />
+    );
+  }
 
   // 1) 离线包命中 → 内联 SVG（断网可用，随主题变色）
   if (valid && packReady && iconLoaded(icon as string)) {

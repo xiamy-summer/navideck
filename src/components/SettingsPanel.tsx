@@ -642,6 +642,9 @@ function DataTab({
   const [backups, setBackups] = useState<Array<{ name: string; size: number; createdAt: number }>>([]);
   const [busy, setBusy] = useState(false);
   const [bookmarkMode, setBookmarkMode] = useState<'replace' | 'append'>('append');
+
+  const sunPanelInput = useRef<HTMLInputElement>(null);
+  const [sunPanelMode, setSunPanelMode] = useState<'replace' | 'append'>('append');
   const query = as ? `?as=${as}` : '';
 
   const loadFiles = async () => {
@@ -669,6 +672,16 @@ function DataTab({
     try {
       const res = await api.importBookmarks(file, mode, as ?? undefined);
       toast(t('data.imported', { g: res.groupCount, i: res.itemCount }));
+    } catch (err) {
+      toast(err instanceof Error ? err.message : t('data.importFailed'));
+    }
+  };
+
+  const doImportSunPanel = async (file: File, mode: 'replace' | 'append') => {
+    try {
+      const res = await api.importSunPanel(file, mode, as ?? undefined);
+      const base = t('data.imported', { g: res.groupCount, i: res.itemCount });
+      toast(res.iconCount ? `${base}（${t('data.sunPanelIcons', { n: res.iconCount })}）` : base);
     } catch (err) {
       toast(err instanceof Error ? err.message : t('data.importFailed'));
     }
@@ -773,6 +786,45 @@ function DataTab({
           }}
         />
         <p className="mt-2 text-[12px] text-muted">{t('data.importBookmarksTip')}</p>
+      </div>
+
+      <div className="border-t border-line pt-5">
+        <h3 className="mb-2 text-[14px] font-medium">{t('data.sunPanel')}</h3>
+        <div className="flex flex-wrap gap-2">
+          <button
+            className="btn"
+            onClick={() => {
+              setSunPanelMode('append');
+              sunPanelInput.current?.click();
+            }}
+          >
+            <Icon icon="mdi:import" size={17} title={t('data.importSunPanel')} />
+            {t('data.importSunPanel')}
+          </button>
+          <button
+            className="btn"
+            onClick={() => {
+              if (confirm(t('data.importConfirm'))) {
+                setSunPanelMode('replace');
+                sunPanelInput.current?.click();
+              }
+            }}
+          >
+            {t('data.sunPanelReplace')}
+          </button>
+        </div>
+        <input
+          ref={sunPanelInput}
+          type="file"
+          accept=".json,application/json"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void doImportSunPanel(file, sunPanelMode);
+            e.target.value = '';
+          }}
+        />
+        <p className="mt-2 text-[12px] text-muted">{t('data.importSunPanelTip')}</p>
       </div>
 
       <div className="border-t border-line pt-5">

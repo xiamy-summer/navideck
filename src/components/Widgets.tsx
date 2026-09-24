@@ -157,24 +157,12 @@ function DockerCard({ refreshSec }: { refreshSec: number }) {
           <span className="text-muted">{t('widget.allRunning', { n: runningCount })}</span>
         </div>
       ) : (
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-[12px]">
-            <span className="dot-run h-2 w-2 flex-none rounded-full" />
-            <span className="text-muted">{t('widget.runningCount', { n: runningCount })}</span>
-            <span className="ml-auto flex-none text-[11px] text-amber-600 dark:text-amber-400">
-              {t('widget.stoppedCount', { n: stoppedContainers.length })}
-            </span>
-          </div>
-          {stoppedContainers.slice(0, 4).map((c) => (
-            <div key={c.id} className="flex items-center gap-2 text-[12px]">
-              <span className="dot-warn h-2 w-2 flex-none rounded-full" />
-              <span className="truncate">{c.name}</span>
-              <span className="ml-auto flex-none text-[11px] text-muted">{c.status}</span>
-            </div>
-          ))}
-          {stoppedContainers.length > 4 ? (
-            <div className="text-[11px] text-muted">{t('widget.moreContainers', { n: stoppedContainers.length - 4 })}</div>
-          ) : null}
+        <div className="flex items-center gap-2 py-1 text-[12px]">
+          <span className="dot-run h-2 w-2 flex-none rounded-full" />
+          <span className="text-muted">{t('widget.runningCount', { n: runningCount })}</span>
+          <span className="ml-auto flex-none text-[11px] text-amber-600 dark:text-amber-400">
+            {t('widget.stoppedCount', { n: stoppedContainers.length })}
+          </span>
         </div>
       )}
     </div>

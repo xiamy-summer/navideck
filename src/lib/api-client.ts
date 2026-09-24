@@ -287,6 +287,29 @@ export const api = {
     return (await res.json()) as { success: boolean; groupCount: number; itemCount: number };
   },
 
+  importSunPanel: async (file: File, mode: 'replace' | 'append', as?: number | null) => {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('mode', mode);
+    const res = await fetch(`/api/import/sun-panel${asQuery(as)}`, { method: 'POST', body: form });
+    if (!res.ok) {
+      let msg = `请求失败 (${res.status})`;
+      try {
+        const d = await res.json();
+        if (d && d.error) msg = d.error;
+      } catch {
+        /* 忽略 */
+      }
+      throw new Error(msg);
+    }
+    return (await res.json()) as {
+      success: boolean;
+      groupCount: number;
+      itemCount: number;
+      iconCount: number;
+    };
+  },
+
   backupList: () => request<{ backups: Array<{ name: string; size: number; createdAt: number }> }>('/api/backup'),
 
   backupNow: () =>

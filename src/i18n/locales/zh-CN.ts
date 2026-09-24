@@ -167,6 +167,12 @@ export const zhCN: Record<string, string> = {
   'data.bookmarks': '浏览器书签',
   'data.importBookmarks': '导入书签',
   'data.importBookmarksTip': '支持 Chrome / Edge / Firefox 导出的 HTML 书签，文件夹将自动转为分组。',
+  'data.sunPanel': 'Sun-Panel 配置',
+  'data.importSunPanel': '导入配置',
+  'data.sunPanelReplace': '导入（覆盖）',
+  'data.importSunPanelTip':
+    '支持 Sun-Panel 导出的 JSON 配置文件。分组、外网 / 内网地址、描述与图标会自动对应；原配置里关联的容器名会一并写入站点，用于首页卡片的运行状态点。',
+  'data.sunPanelIcons': '含 {n} 个图标',
   'data.bookmarksReplace': '导入（覆盖）',
   'data.backupManage': '备份管理',
   'data.backupNow': '立即备份',
