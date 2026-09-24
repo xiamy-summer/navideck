@@ -116,12 +116,13 @@ export function SettingsPanel({ user, initialSettings, users: initialUsers }: Pr
         ) : null}
       </div>
 
-      <div className="mb-5 flex flex-wrap gap-1.5">
+      <div className="segment mb-5">
         {TABS.filter((tabMeta) => !tabMeta.adminOnly || isAdmin).map((tabMeta) => (
           <button
             key={tabMeta.id}
             onClick={() => setTab(tabMeta.id)}
-            className={`btn ${tab === tabMeta.id ? 'btn-primary' : ''}`}
+            data-active={tab === tabMeta.id}
+            className="segment-item"
           >
             <Icon icon={tabMeta.icon} size={17} title={t(`tab.${tabMeta.id}`)} />
             {t(`tab.${tabMeta.id}`)}

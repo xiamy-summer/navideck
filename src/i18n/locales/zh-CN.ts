@@ -329,6 +329,13 @@ export const zhCN: Record<string, string> = {
   'oidc.buttonLabel': '按钮文案（可选）',
   'oidc.buttonLabelHint': '留空则使用界面语言的默认文案',
 
+  'dialog.item.container': 'Docker 容器',
+  'dialog.item.containerNone': '不关联',
+  'dialog.item.containerHint': '选中后自动填充名称与内网地址，并在卡片上显示运行状态',
+  'dialog.item.containerUnavailable': '未检测到 Docker；挂载 /var/run/docker.sock 后即可选择容器',
+  'group.collapse': '收起分组',
+  'group.expand': '展开分组',
+
   'widget.system': '系统',
   'widget.load': '负载 {n}',
   'widget.cpu': 'CPU',

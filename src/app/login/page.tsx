@@ -43,9 +43,11 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
-      <form onSubmit={submit} className="card w-full max-w-sm p-7">
+      <form onSubmit={submit} className="card login-card w-full max-w-sm p-7">
         <div className="mb-6 flex flex-col items-center gap-2">
-          <Icon icon="mdi:compass-outline" size={40} title="NaviDeck" />
+          <span className="icon-tile" style={{ padding: '12px' }}>
+            <Icon icon="mdi:compass-outline" size={40} title="NaviDeck" />
+          </span>
           <h1 className="text-[17px] font-medium">{t('login.title')}</h1>
           <p className="text-[12px] text-muted">{t('login.tip')}</p>
         </div>

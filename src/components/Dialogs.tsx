@@ -5,7 +5,7 @@ import { Icon } from './Icon';
 import { IconPicker } from './IconPicker';
 import type { Group, Item, ItemService, OpenMode } from '@/lib/types';
 import type { ProbeResult, ServiceTemplate } from '@/lib/serviceWidgets';
-import { api } from '@/lib/api-client';
+import { api, type DockerContainer } from '@/lib/api-client';
 import { useI18n } from '@/i18n';
 
 export interface ItemDraft {
@@ -20,6 +20,8 @@ export interface ItemDraft {
   color: string | null;
   /** 服务集成配置（ItemService 序列化后的 JSON 字符串） */
   service: string | null;
+  /** 关联的 Docker 容器名，用于在卡片上显示运行状态 */
+  container: string | null;
 }
 
 function parseService(raw: string | null): ItemService | null {
@@ -80,6 +82,8 @@ export function ItemDialog({ draft, groups, onClose, onSave, onDelete }: ItemDia
   const [svc, setSvc] = useState<ItemService | null>(() => parseService(draft.service));
   const [testing, setTesting] = useState(false);
   const [probe, setProbe] = useState<ProbeResult | null>(null);
+  const [containers, setContainers] = useState<DockerContainer[]>([]);
+  const [dockerAvailable, setDockerAvailable] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -122,10 +126,46 @@ export function ItemDialog({ draft, groups, onClose, onSave, onDelete }: ItemDia
     }
   }, [svc, t]);
 
+  useEffect(() => {
+    let alive = true;
+    api
+      .dockerContainers()
+      .then((r) => {
+        if (!alive) return;
+        setDockerAvailable(Boolean(r.available));
+        setContainers(r.containers ?? []);
+      })
+      .catch(() => {
+        /* Docker 不可用时下拉仅剩「不关联」 */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  /** 选中容器后自动补标题与内网地址（端口映射到当前访问主机） */
+  const applyContainer = (name: string) => {
+    const picked = containers.find((c) => c.name === name);
+    set('container', name || null);
+    if (!picked) return;
+    const label = picked.name.replace(/^\//, '');
+    if (!form.title.trim()) set('title', label);
+    if (!form.urlLan.trim()) {
+      const port = picked.ports.find((p) => p.public)?.public;
+      if (port) {
+        const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+        set('urlLan', `http://${host}:${port}`);
+      }
+    }
+  };
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h3 className="mb-4 text-[15px] font-medium">{form.id ? t('dialog.item.edit') : t('dialog.item.add')}</h3>
+        <div className="mb-4 flex items-center gap-2">
+          <span className="group-rule" />
+          <h3 className="text-[15px] font-medium">{form.id ? t('dialog.item.edit') : t('dialog.item.add')}</h3>
+        </div>
 
         <div className="space-y-3">
           <div>
@@ -154,6 +194,21 @@ export function ItemDialog({ draft, groups, onClose, onSave, onDelete }: ItemDia
                 onChange={(e) => set('urlWan', e.target.value)}
               />
             </div>
+          </div>
+
+          <div>
+            <div className="mb-1.5 text-[13px] text-muted">{t('dialog.item.container')}</div>
+            <select className="field" value={form.container ?? ''} onChange={(e) => applyContainer(e.target.value)}>
+              <option value="">{t('dialog.item.containerNone')}</option>
+              {containers.map((c) => (
+                <option key={c.id} value={c.name}>
+                  {c.name.replace(/^\//, '')} · {c.state}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-[11px] text-muted">
+              {dockerAvailable ? t('dialog.item.containerHint') : t('dialog.item.containerUnavailable')}
+            </p>
           </div>
 
           <div>
@@ -360,7 +415,10 @@ export function GroupDialog({ draft, onClose, onSave }: GroupDialogProps) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h3 className="mb-4 text-[15px] font-medium">{form.id ? t('dialog.group.edit') : t('dialog.group.add')}</h3>
+        <div className="mb-4 flex items-center gap-2">
+          <span className="group-rule" />
+          <h3 className="text-[15px] font-medium">{form.id ? t('dialog.group.edit') : t('dialog.group.add')}</h3>
+        </div>
         <div className="space-y-3">
           <div>
             <div className="mb-1.5 text-[13px] text-muted">{t('dialog.group.name')}</div>
@@ -433,6 +491,7 @@ export function emptyItemDraft(groupId: number): ItemDraft {
     openMode: 'blank',
     color: null,
     service: null,
+    container: null,
   };
 }
 
@@ -448,5 +507,6 @@ export function itemToDraft(item: Item): ItemDraft {
     openMode: item.openMode,
     color: item.color,
     service: item.service ?? null,
+    container: item.container ?? null,
   };
 }

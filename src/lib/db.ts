@@ -108,10 +108,13 @@ function migrate(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_metric_alerts_t ON metric_alerts(t);
   `);
 
-  // 旧库升级：为已有 items 表补上服务集成列
+  // 旧库升级：为已有 items 表补上服务集成与容器关联列
   const itemCols = db.prepare('PRAGMA table_info(items)').all() as Array<{ name: string }>;
   if (!itemCols.some((c) => c.name === 'service')) {
     db.exec('ALTER TABLE items ADD COLUMN service TEXT');
+  }
+  if (!itemCols.some((c) => c.name === 'container')) {
+    db.exec('ALTER TABLE items ADD COLUMN container TEXT');
   }
 }
 
@@ -333,8 +336,8 @@ export function createItem(
     .get(input.groupId) as { s: number };
   const info = db
     .prepare(
-      `INSERT INTO items (groupId, userId, title, icon, urlLan, urlWan, desc, openMode, color, sort, service, createdAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO items (groupId, userId, title, icon, urlLan, urlWan, desc, openMode, color, sort, service, container, createdAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       input.groupId,
@@ -348,6 +351,7 @@ export function createItem(
       input.color ?? null,
       next.s,
       input.service ?? null,
+      input.container ?? null,
       Date.now(),
     );
   return db.prepare('SELECT * FROM items WHERE id = ?').get(info.lastInsertRowid) as Item;
@@ -359,7 +363,17 @@ export function updateItem(
   patch: Partial<
     Pick<
       Item,
-      'title' | 'icon' | 'urlLan' | 'urlWan' | 'desc' | 'openMode' | 'color' | 'sort' | 'groupId' | 'service'
+      | 'title'
+      | 'icon'
+      | 'urlLan'
+      | 'urlWan'
+      | 'desc'
+      | 'openMode'
+      | 'color'
+      | 'sort'
+      | 'groupId'
+      | 'service'
+      | 'container'
     >
   >,
 ): Item | null {
@@ -376,6 +390,7 @@ export function updateItem(
     sort: 'sort',
     groupId: 'groupId',
     service: 'service',
+    container: 'container',
   };
   const sets: string[] = [];
   const args: unknown[] = [];

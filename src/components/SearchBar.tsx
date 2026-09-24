@@ -49,7 +49,7 @@ export function SearchBar({ settings, items, onOpenItem }: Props) {
   return (
     <div className="relative mx-auto w-full" style={{ maxWidth: settings.searchWidth || 520 }}>
       <div
-        className="flex items-center gap-2 border border-line px-3 py-2 shadow-card"
+        className="search-box flex items-center gap-2 border border-line px-3 py-2 shadow-card"
         style={boxStyle}
       >
         {engines.length ? (

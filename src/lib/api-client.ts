@@ -152,6 +152,7 @@ export const api = {
       openMode?: OpenMode;
       color?: string | null;
       service?: string | null;
+      container?: string | null;
     },
     as?: number | null,
   ) => request<Item>(`/api/items${asQuery(as)}`, { method: 'POST', body: JSON.stringify(input) }),
@@ -161,7 +162,17 @@ export const api = {
     patch: Partial<
       Pick<
         Item,
-        'title' | 'icon' | 'urlLan' | 'urlWan' | 'desc' | 'openMode' | 'color' | 'sort' | 'groupId' | 'service'
+        | 'title'
+        | 'icon'
+        | 'urlLan'
+        | 'urlWan'
+        | 'desc'
+        | 'openMode'
+        | 'color'
+        | 'sort'
+        | 'groupId'
+        | 'service'
+        | 'container'
       >
     >,
     as?: number | null,

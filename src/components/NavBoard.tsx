@@ -33,6 +33,8 @@ interface Props {
   editMode: boolean;
   /** 站点服务集成的实时状态，key 为站点 id */
   serviceStatus?: Record<string, ProbeResult>;
+  /** 容器名到运行状态的映射，用于卡片上的状态点 */
+  containerStatus?: Record<string, string>;
   onPersist: (prev: GroupWithItems[], next: GroupWithItems[]) => void;
   onOpenItem: (item: Item) => void;
   onEditItem: (item: Item, groupId: number) => void;
@@ -158,6 +160,33 @@ export function NavBoard(props: Props) {
 function SortableGroup({ group, activeId, ...props }: Props & { group: GroupWithItems; activeId: string | null }) {
   const { editMode } = props;
   const { t } = useI18n();
+
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      const raw = JSON.parse(localStorage.getItem('navideck-collapsed-groups') ?? '[]') as number[];
+      return Array.isArray(raw) && raw.includes(group.id);
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleCollapse = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        const raw = JSON.parse(localStorage.getItem('navideck-collapsed-groups') ?? '[]') as number[];
+        const list = Array.isArray(raw) ? raw : [];
+        const updated = next
+          ? Array.from(new Set([...list, group.id]))
+          : list.filter((x) => x !== group.id);
+        localStorage.setItem('navideck-collapsed-groups', JSON.stringify(updated));
+      } catch {
+        /* 隐私模式下忽略写入失败 */
+      }
+      return next;
+    });
+  };
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `g-${group.id}`,
     disabled: !editMode,
@@ -180,9 +209,24 @@ function SortableGroup({ group, activeId, ...props }: Props & { group: GroupWith
             <Icon icon="mdi:drag" size={18} title={t('common.drag')} />
           </button>
         ) : null}
-        <Icon icon={group.icon} size={20} title={group.name} />
-        <h2 className="text-[15px] font-medium">{group.name}</h2>
-        <span className="chip">{group.items.length}</span>
+        <span className="group-rule" />
+        <button
+          type="button"
+          onClick={toggleCollapse}
+          className="flex items-center gap-1.5"
+          title={collapsed ? t('group.expand') : t('group.collapse')}
+        >
+          <Icon
+            icon={collapsed ? 'mdi:chevron-right' : 'mdi:chevron-down'}
+            size={18}
+            title={collapsed ? t('group.expand') : t('group.collapse')}
+          />
+          <span className="group-icon">
+            <Icon icon={group.icon} size={18} title={group.name} />
+          </span>
+          <h2 className="text-[15px] font-medium">{group.name}</h2>
+          <span className="count-badge">{group.items.length}</span>
+        </button>
 
         {editMode ? (
           <div className="ml-auto flex items-center gap-1">
@@ -203,7 +247,8 @@ function SortableGroup({ group, activeId, ...props }: Props & { group: GroupWith
         ) : null}
       </header>
 
-      <SortableContext items={group.items.map((i) => `i-${i.id}`)} strategy={rectSortingStrategy}>
+      {collapsed ? null : (
+        <SortableContext items={group.items.map((i) => `i-${i.id}`)} strategy={rectSortingStrategy}>
         <div
           className="grid-area"
           style={{ ['--card-min' as string]: `${Math.max(96, Math.round(1080 / Math.max(2, props.settings.columns)))}px` }}
@@ -220,14 +265,17 @@ function SortableGroup({ group, activeId, ...props }: Props & { group: GroupWith
               {t('home.addSite')}
             </button>
           ) : null}
-        </div>
-      </SortableContext>
+          </div>
+        </SortableContext>
+      )}
     </section>
   );
 }
 
 function SortableItem({ item, ...props }: Props & { item: Item; activeId: string | null }) {
-  const { settings, editMode, netMode, serviceStatus } = props;
+  const { settings, editMode, netMode, serviceStatus, containerStatus } = props;
+  const containerKey = item.container ? item.container.replace(/^\//, '') : '';
+  const containerState = containerKey ? containerStatus?.[containerKey] : undefined;
   const { t } = useI18n();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `i-${item.id}`,
@@ -250,9 +298,25 @@ function SortableItem({ item, ...props }: Props & { item: Item; activeId: string
       }}
       title={item.desc || item.title}
     >
-      <Icon icon={item.icon} size={settings.iconSize || 34} title={item.title} />
+      <div className="icon-tile">
+        <Icon icon={item.icon} size={settings.iconSize || 34} title={item.title} />
+      </div>
 
-      <span className="w-full truncate text-[13px] font-medium">{item.title}</span>
+      <span className="flex w-full items-center justify-center gap-1.5 text-[13px] font-medium">
+        {item.container ? (
+          <span
+            className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+              containerState === 'running'
+                ? 'dot-run dot-pulse'
+                : containerState
+                  ? 'dot-warn'
+                  : 'dot-idle'
+            }`}
+            title={`${containerKey || item.container}${containerState ? ` · ${containerState}` : ''}`}
+          />
+        ) : null}
+        <span className="truncate">{item.title}</span>
+      </span>
       {settings.showDesc && item.desc ? (
         <span className="w-full truncate text-[11px] text-muted">{item.desc}</span>
       ) : null}
@@ -261,7 +325,7 @@ function SortableItem({ item, ...props }: Props & { item: Item; activeId: string
         <span className="flex w-full flex-wrap items-center justify-center gap-x-2 text-[10px]">
           {serviceStatus[item.id].ok ? null : (
             <span
-              className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500"
+              className="dot-err dot-pulse h-1.5 w-1.5 shrink-0 rounded-full"
               title={serviceStatus[item.id].message ?? ''}
             />
           )}

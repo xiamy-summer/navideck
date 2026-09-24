@@ -329,6 +329,13 @@ export const enUS: Record<string, string> = {
   'oidc.buttonLabel': 'Button label (optional)',
   'oidc.buttonLabelHint': 'Leave empty to use the default label for the current language',
 
+  'dialog.item.container': 'Docker container',
+  'dialog.item.containerNone': 'Not linked',
+  'dialog.item.containerHint': 'Fills in the name and LAN address automatically, and shows run state on the card',
+  'dialog.item.containerUnavailable': 'Docker not detected — mount /var/run/docker.sock to pick a container',
+  'group.collapse': 'Collapse group',
+  'group.expand': 'Expand group',
+
   'widget.system': 'System',
   'widget.load': 'Load {n}',
   'widget.cpu': 'CPU',

@@ -176,6 +176,186 @@ body {
 
 .grid-area {
   display: grid;
-  gap: 12px;
+  gap: var(--grid-gap, 12px);
   grid-template-columns: repeat(auto-fill, minmax(var(--card-min, 132px), 1fr));
+}
+
+/* ---------------- 交互反馈 ---------------- */
+.link-card:active {
+  transform: translateY(0) scale(0.985);
+}
+.link-card:focus-visible {
+  outline: none;
+  border-color: rgb(var(--brand));
+  box-shadow: 0 0 0 3px rgb(var(--brand) / 0.25);
+}
+
+/* ---------------- 层次与主题细节 ---------------- */
+.card {
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.05);
+}
+.dark .card {
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+}
+.btn-primary {
+  box-shadow: 0 1px 2px rgb(var(--brand) / 0.35);
+}
+
+/* ---------------- 移动端适配 ---------------- */
+@media (max-width: 640px) {
+  .grid-area {
+    --grid-gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  }
+  .link-card {
+    min-height: 84px;
+  }
+  .card {
+    border-radius: min(var(--card-radius, 14px), 12px);
+  }
+  .btn {
+    padding: 8px 12px;
+  }
+  .field {
+    padding: 9px 12px;
+  }
+  .icon-tile {
+    padding: 6px;
+  }
+  .group-icon {
+    width: 26px;
+    height: 26px;
+  }
+}
+
+/* ---------------- 图标容器（圆角色块底） ---------------- */
+.icon-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: calc(var(--card-radius, 14px) - 4px);
+  background: rgb(var(--brand) / 0.1);
+  color: rgb(var(--brand));
+  padding: 8px;
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+.dark .icon-tile {
+  background: rgb(var(--brand) / 0.16);
+}
+
+/* 分组标题图标容器（小一号） */
+.group-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: rgb(var(--brand) / 0.1);
+  color: rgb(var(--brand));
+  flex: none;
+  transition: background 0.18s ease;
+}
+
+/* ---------------- 分组强调竖条 ---------------- */
+.group-rule {
+  width: 3px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgb(var(--brand));
+  flex: none;
+}
+
+/* ---------------- 计数徽章 ---------------- */
+.count-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: rgb(var(--brand) / 0.1);
+  color: rgb(var(--brand));
+  padding: 1px 9px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.6;
+}
+.dark .count-badge {
+  background: rgb(var(--brand) / 0.18);
+}
+
+/* ---------------- 状态点 + 呼吸动画 ---------------- */
+.dot-run  { --pulse-color: 16 185 129; background: rgb(var(--pulse-color)); }
+.dot-warn { --pulse-color: 245 158 11; background: rgb(var(--pulse-color)); }
+.dot-err  { --pulse-color: 239 68 68;  background: rgb(var(--pulse-color)); }
+.dot-idle { background: #a1a1aa; }
+
+@keyframes pulse-dot {
+  0%   { box-shadow: 0 0 0 0 rgb(var(--pulse-color) / 0.55); }
+  70%  { box-shadow: 0 0 0 5px rgb(var(--pulse-color) / 0); }
+  100% { box-shadow: 0 0 0 0 rgb(var(--pulse-color) / 0); }
+}
+.dot-pulse {
+  animation: pulse-dot 1.8s ease-out infinite;
+}
+
+/* ---------------- 卡片图标随 hover 微缩放 ---------------- */
+.link-card:hover .icon-tile {
+  transform: scale(1.07);
+}
+
+/* ---------------- 暗色卡片 hover 阴影增强 ---------------- */
+.dark .link-card:hover {
+  box-shadow: 0 12px 28px -16px rgb(0 0 0 / 0.85);
+}
+
+/* ---------------- 搜索框聚焦高亮 ---------------- */
+.search-box {
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.search-box:focus-within {
+  border-color: rgb(var(--brand) / 0.6);
+  box-shadow: 0 0 0 3px rgb(var(--brand) / 0.16), 0 6px 18px -10px rgb(var(--brand) / 0.5);
+}
+
+/* ---------------- 登录卡片（居中登录框的品牌色柔和投影） ---------------- */
+.login-card {
+  border-radius: 18px;
+  box-shadow: 0 18px 44px -26px rgb(var(--brand) / 0.55), 0 1px 2px rgb(15 23 42 / 0.05);
+}
+.dark .login-card {
+  box-shadow: 0 18px 44px -24px rgb(0 0 0 / 0.75), 0 1px 2px rgb(0 0 0 / 0.3);
+}
+
+/* ---------------- 页签分段控件（设置中心页签） ---------------- */
+.segment {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  border-radius: 14px;
+  border: 1px solid rgb(var(--line));
+  background: rgb(var(--canvas));
+  padding: 5px;
+}
+.segment-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 10px;
+  padding: 7px 12px;
+  font-size: 13px;
+  color: rgb(var(--muted));
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+}
+.segment-item:hover {
+  background: rgb(var(--brand) / 0.1);
+  color: rgb(var(--brand));
+}
+.segment-item[data-active='true'] {
+  background: rgb(var(--brand));
+  color: #fff;
+  box-shadow: 0 1px 2px rgb(var(--brand) / 0.35);
+}
+.segment-item[data-active='true']:hover {
+  background: rgb(var(--brand));
+  color: #fff;
 }

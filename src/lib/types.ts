@@ -40,6 +40,8 @@ export interface Item {
   createdAt: number;
   /** 服务集成配置（ItemService 序列化后的 JSON 字符串），未配置时为 null */
   service?: string | null;
+  /** 关联的 Docker 容器名，用于在卡片上显示运行状态 */
+  container?: string | null;
 }
 
 /** 站点绑定的服务集成配置，对应 Homepage 的 service widget */

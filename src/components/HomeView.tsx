@@ -36,6 +36,7 @@ export function HomeView({
   const [groups, setGroups] = useState<GroupWithItems[]>(initialGroups);
   const [settings, setSettings] = useState<Settings>(initialSettings);
   const [serviceStatus, setServiceStatus] = useState<Record<string, ProbeResult>>({});
+  const [containerStatus, setContainerStatus] = useState<Record<string, string>>({});
 
   // 站点服务集成的实时状态，60 秒刷新一次（密钥存服务端，不经前端回传）
   useEffect(() => {
@@ -50,6 +51,32 @@ export function HomeView({
     };
     void load();
     const timer = setInterval(() => void load(), 60_000);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
+  }, []);
+
+  // 容器运行状态，30 秒刷新一次，用于站点卡片上的状态点
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      try {
+        const res = await api.dockerContainers();
+        if (!alive) return;
+        if (!res.available) {
+          setContainerStatus({});
+          return;
+        }
+        const map: Record<string, string> = {};
+        for (const c of res.containers ?? []) map[c.name.replace(/^\//, '')] = c.state;
+        setContainerStatus(map);
+      } catch {
+        /* Docker 不可用时静默 */
+      }
+    };
+    void load();
+    const timer = setInterval(() => void load(), 30_000);
     return () => {
       alive = false;
       clearInterval(timer);
@@ -398,6 +425,7 @@ export function HomeView({
           onDeleteGroup={(group) => setConfirmDelete({ kind: 'group', id: group.id, name: group.name })}
           onAddItem={(groupId) => setPending({ kind: 'item', draft: emptyItemDraft(groupId) })}
           serviceStatus={serviceStatus}
+          containerStatus={containerStatus}
         />
       )}
 
