@@ -35,6 +35,8 @@ interface Props {
   serviceStatus?: Record<string, ProbeResult>;
   /** 容器名到运行状态的映射，用于卡片上的状态点 */
   containerStatus?: Record<string, string>;
+  /** 未绑定容器站点的 HTTP 探活结果，key 为站点 id */
+  probeStatus?: Record<string, { ok: boolean; reason?: string }>;
   onPersist: (prev: GroupWithItems[], next: GroupWithItems[]) => void;
   onOpenItem: (item: Item) => void;
   onEditItem: (item: Item, groupId: number) => void;
@@ -273,9 +275,11 @@ function SortableGroup({ group, activeId, ...props }: Props & { group: GroupWith
 }
 
 function SortableItem({ item, ...props }: Props & { item: Item; activeId: string | null }) {
-  const { settings, editMode, netMode, serviceStatus, containerStatus } = props;
+  const { settings, editMode, netMode, serviceStatus, containerStatus, probeStatus } = props;
   const containerKey = item.container ? item.container.replace(/^\//, '') : '';
   const containerState = containerKey ? containerStatus?.[containerKey] : undefined;
+  // 未绑定容器的站点回退到 HTTP 探活结果（绑定容器的优先用容器状态，语义不冲突）
+  const probe = !item.container ? probeStatus?.[String(item.id)] : undefined;
   const { t } = useI18n();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `i-${item.id}`,
@@ -283,6 +287,28 @@ function SortableItem({ item, ...props }: Props & { item: Item; activeId: string
   });
 
   const url = netMode === 'wan' ? item.urlWan || item.urlLan : item.urlLan || item.urlWan;
+
+  // 状态点：绑定容器 → 容器运行状态；未绑定容器 → 探活结果；两者皆无 → 不渲染
+  let dot: { cls: string; title: string } | null = null;
+  if (item.container) {
+    dot = {
+      cls: containerState === 'running' ? 'dot-run dot-pulse' : containerState ? 'dot-warn' : 'dot-idle',
+      title: `${containerKey || item.container}${containerState ? ` · ${containerState}` : ''}`,
+    };
+  } else if (probe) {
+    dot = probe.ok
+      ? { cls: 'dot-run dot-pulse', title: t('probe.up') }
+      : {
+          cls: 'dot-err dot-pulse',
+          title: `${t('probe.down')} · ${
+            probe.reason
+              ? probe.reason.startsWith('http:')
+                ? `HTTP ${probe.reason.slice(5)}`
+                : t(`probe.reason.${probe.reason}`)
+              : ''
+          }`,
+        };
+  }
 
   return (
     <div
@@ -302,19 +328,11 @@ function SortableItem({ item, ...props }: Props & { item: Item; activeId: string
         <Icon icon={item.icon} size={settings.iconSize || 34} title={item.title} />
       </div>
 
-      <span className="flex w-full items-center justify-center gap-1.5 text-[13px] font-medium">
-        {item.container ? (
-          <span
-            className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-              containerState === 'running'
-                ? 'dot-run dot-pulse'
-                : containerState
-                  ? 'dot-warn'
-                  : 'dot-idle'
-            }`}
-            title={`${containerKey || item.container}${containerState ? ` · ${containerState}` : ''}`}
-          />
-        ) : null}
+      <span
+        className="flex w-full items-center justify-center gap-1.5 text-[13px] font-medium"
+        title={dot ? dot.title : undefined}
+      >
+        {dot ? <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot.cls}`} /> : null}
         <span className="truncate">{item.title}</span>
       </span>
       {settings.showDesc && item.desc ? (

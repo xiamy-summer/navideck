@@ -83,6 +83,29 @@ export function HomeView({
     };
   }, []);
   const [netMode, setNetMode] = useState<NetMode>(initialSettings.netMode);
+
+  /** 未绑定容器站点的 HTTP 探活结果，key 为站点 id */
+  const [probeStatus, setProbeStatus] = useState<Record<string, { ok: boolean; reason?: string }>>({});
+
+  // HTTP 探活：只覆盖未绑定容器的站点；跟随内外网模式切换，30 秒刷新
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      try {
+        const res = await api.probe(netMode);
+        if (alive) setProbeStatus(res.status ?? {});
+      } catch {
+        /* 未登录时静默 */
+      }
+    };
+    void load();
+    const timer = setInterval(() => void load(), 30_000);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
+  }, [netMode]);
+
   const [editMode, setEditMode] = useState(false);
   const [theme, setTheme] = useState<ThemeMode>(initialSettings.theme);
   const [pending, setPending] = useState<Pending>(null);
@@ -441,6 +464,7 @@ export function HomeView({
           onAddItem={(groupId) => setPending({ kind: 'item', draft: emptyItemDraft(groupId) })}
           serviceStatus={serviceStatus}
           containerStatus={containerStatus}
+          probeStatus={probeStatus}
         />
       )}
 

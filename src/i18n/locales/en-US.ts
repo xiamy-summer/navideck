@@ -38,6 +38,15 @@ export const enUS: Record<string, string> = {
   'net.lan': 'LAN',
   'net.wan': 'WAN',
 
+  'probe.up': 'Online',
+  'probe.down': 'Offline',
+  'probe.reason.timeout': 'Timed out',
+  'probe.reason.refused': 'Connection refused',
+  'probe.reason.dns': 'DNS lookup failed',
+  'probe.reason.tls': 'Certificate error',
+  'probe.reason.error': 'Request failed',
+  'probe.reason.invalid-url': 'Invalid URL',
+
   'home.editMode': 'Edit',
   'home.editDone': 'Done',
   'home.editHint': 'Edit mode: drag cards and groups to reorder, use the pencil to modify, plus to add.',

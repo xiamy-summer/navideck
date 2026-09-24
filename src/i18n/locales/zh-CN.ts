@@ -38,6 +38,15 @@ export const zhCN: Record<string, string> = {
   'net.lan': '内网',
   'net.wan': '外网',
 
+  'probe.up': '在线',
+  'probe.down': '离线',
+  'probe.reason.timeout': '请求超时',
+  'probe.reason.refused': '连接被拒绝',
+  'probe.reason.dns': '域名解析失败',
+  'probe.reason.tls': '证书错误',
+  'probe.reason.error': '请求失败',
+  'probe.reason.invalid-url': '无效地址',
+
   'home.editMode': '编辑',
   'home.editDone': '完成',
   'home.editHint': '编辑模式：可直接拖动卡片与分组排序，点击卡片上的铅笔修改，加号新增。',

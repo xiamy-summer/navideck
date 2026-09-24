@@ -219,6 +219,12 @@ export const api = {
 
   dockerContainers: () => request<DockerListResult>('/api/docker/containers'),
 
+  /** 未绑定容器站点的 HTTP 探活结果（服务端缓存 60s） */
+  probe: (mode: 'lan' | 'wan') =>
+    request<{ mode: string; status: Record<string, { ok: boolean; reason?: string; at: number }> }>(
+      `/api/probe?mode=${mode}`,
+    ),
+
   /** 管理员自助诊断：用当前全局配置测试能否拉到 IdP 元数据（discovery） */
   oidcTest: () =>
     request<{
