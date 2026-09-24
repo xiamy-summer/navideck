@@ -3,11 +3,19 @@ import './globals.css';
 import { getCurrentUser } from '@/lib/auth';
 import { getGlobalSettings, getUserByName, getUserSettings } from '@/lib/db';
 import { ensureBootstrap } from '@/lib/bootstrap';
+import { PwaRegister } from '@/components/PwaRegister';
 
 export const metadata: Metadata = {
   title: 'NaviDeck',
   description: 'Lightweight self-hosted dashboard for NAS / servers',
-  icons: { icon: '/favicon.svg' },
+  applicationName: 'NaviDeck',
+  manifest: '/manifest.json',
+  icons: { icon: '/favicon.svg', apple: '/icon-192.png' },
+  appleWebApp: {
+    capable: true,
+    title: 'NaviDeck',
+    statusBarStyle: 'default',
+  },
 };
 
 export const viewport: Viewport = {
@@ -34,6 +42,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={settings.lang || 'zh-CN'} suppressHydrationWarning>
       <head>
+        {/* iOS 添加到主屏后以独立窗口打开（Next 默认只输出 mobile-web-app-capable） */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var t=${JSON.stringify(settings.theme)};var o=localStorage.getItem('nas-nav-theme');if(o)t=o;var d=t==='dark'||(t==='auto'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);}catch(e){}})()`,
@@ -52,6 +62,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         }
       >
         {children}
+        <PwaRegister />
         {globalSettings.customJs && !settings.customJs ? null : null}
         {settings.customJs ? (
           <script dangerouslySetInnerHTML={{ __html: settings.customJs }} />
