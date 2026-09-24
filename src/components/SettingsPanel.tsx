@@ -53,12 +53,13 @@ export function SettingsPanel({ user, initialSettings, users: initialUsers }: Pr
 
   const isAdmin = user.role === 'admin';
 
-  // 个人导航栏通常只有「自己 + 访客」，此时「全局默认」与「用户: 自己」都是冗余项
-  // （后者与「我的配置」指向同一账号）。仅当存在其他真实用户时才展示完整的目标切换。
+  // 「全局设置」是 OIDC / 监控告警 / 访客开关等全局配置的唯一入口，必须始终可进入，
+  // 不能随多用户判断一起隐藏（否则会陷入「提示切全局、却没有全局入口」的死锁）。
+  // 只精简掉真正冗余的部分：与自己重复的账号项。
   const otherRealUsers = users.filter((u) => u.role !== 'guest' && u.id !== user.id);
   const multiUser = otherRealUsers.length > 0;
   const guestUser = users.find((u) => u.role === 'guest');
-  const showTargetPicker = isAdmin && (multiUser || Boolean(guestUser));
+  const showTargetPicker = isAdmin;
 
   useEffect(() => {
     if (!toast) return;
@@ -97,6 +98,17 @@ export function SettingsPanel({ user, initialSettings, users: initialUsers }: Pr
     await reload(id, false);
   };
 
+  // 单点登录为全局设置：打开该页签时自动切到「全局设置」，
+  // 免去手动切换（否则极易误存进个人设置，表现为"开了开关但登录页没按钮"）
+  useEffect(() => {
+    if (tab === 'oidc' && isAdmin && !isGlobal) {
+      setAs(null);
+      setIsGlobal(true);
+      void reload(null, true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, isAdmin]);
+
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6">
       <div className="mb-5 flex flex-wrap items-center gap-2">
@@ -113,8 +125,9 @@ export function SettingsPanel({ user, initialSettings, users: initialUsers }: Pr
             onChange={(e) => selectTarget(e.target.value)}
           >
             <option value="self">{t('settings.targetSelf')}</option>
-            {/* 「全局默认」与「代管其他用户」只在多用户场景下才有意义 */}
-            {multiUser ? <option value="global">{t('settings.targetGlobal')}</option> : null}
+            {/* 全局设置：OIDC / 告警 / 访客开关的唯一入口，始终保留 */}
+            <option value="global">{t('settings.targetGlobal')}</option>
+            {/* 代管其他用户只在多用户场景下才有意义 */}
             {multiUser
               ? otherRealUsers.map((u) => (
                   <option key={u.id} value={u.id}>

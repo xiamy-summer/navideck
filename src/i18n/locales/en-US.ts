@@ -97,7 +97,7 @@ export const enUS: Record<string, string> = {
 
   'settings.title': 'Settings',
   'settings.targetSelf': 'My configuration',
-  'settings.targetGlobal': 'Global default (inherited by new users)',
+  'settings.targetGlobal': 'Global settings (SSO / alerts / guest)',
   'tab.appearance': 'Appearance',
   'tab.search': 'Search',
   'tab.custom': 'Custom code',
@@ -308,7 +308,7 @@ export const enUS: Record<string, string> = {
   'oidc.callbackHint': 'Redirect URI to register with your provider:',
   'oidc.enabled': 'Enable single sign-on',
   'oidc.enabledHint': 'Shows a single sign-on button on the login page',
-  'oidc.warnNotGlobal': 'You are editing personal settings, but SSO only reads global settings — switch the target to Global, otherwise the login page will not show the button.',
+  'oidc.warnNotGlobal': 'You are editing personal settings, but SSO only reads global settings — switch the target to Global settings and re-enter the fields below, otherwise the login page will not show the button.',
   'oidc.warnIncomplete': 'Enabled, but Issuer or Client ID is still empty, so the login page will not show the SSO button.',
   'oidc.issuer': 'Issuer URL',
   'oidc.issuerHint': 'Provider URL that serves /.well-known/openid-configuration',
