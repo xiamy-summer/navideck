@@ -219,6 +219,18 @@ export const api = {
 
   dockerContainers: () => request<DockerListResult>('/api/docker/containers'),
 
+  /** 管理员自助诊断：用当前全局配置测试能否拉到 IdP 元数据（discovery） */
+  oidcTest: () =>
+    request<{
+      ok: boolean;
+      message: string;
+      ms?: number;
+      issuer?: string;
+      authorizationEndpoint?: string;
+      tokenEndpoint?: string;
+      warning?: string;
+    }>('/api/auth/oidc/test', { method: 'POST' }),
+
   dockerAction: (id: string, action: 'start' | 'stop' | 'restart') =>
     request<{ success: boolean }>(`/api/docker/containers/${id}/action`, {
       method: 'POST',

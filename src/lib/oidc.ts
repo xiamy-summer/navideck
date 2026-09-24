@@ -16,7 +16,8 @@ export interface OidcConfig {
   buttonLabel: string;
 }
 
-let cachedDiscovery: { ts: number; doc: Record<string, unknown> } | null = null;
+// 缓存必须绑定 issuer：否则管理员改了 Issuer 后会在一小时内继续命中旧文档，排查时极易误判
+let cachedDiscovery: { ts: number; issuer: string; doc: Record<string, unknown> } | null = null;
 
 /**
  * 读取并校验 OIDC 配置；未启用或缺失关键项时返回 null。
@@ -59,7 +60,9 @@ export function getOidcConfig(overrideRedirectUri?: string): OidcConfig | null {
 
 /** 获取 OIDC discovery 文档（带 1 小时缓存） */
 export async function discover(issuer: string): Promise<Record<string, unknown>> {
-  if (cachedDiscovery && cachedDiscovery.ts > Date.now() - 3600_000) return cachedDiscovery.doc;
+  if (cachedDiscovery && cachedDiscovery.issuer === issuer && cachedDiscovery.ts > Date.now() - 3600_000) {
+    return cachedDiscovery.doc;
+  }
   const url = `${issuer}/.well-known/openid-configuration`;
 
   let res: Response;
@@ -81,7 +84,7 @@ export async function discover(issuer: string): Promise<Record<string, unknown>>
     throw new Error(`OIDC 发现文档缺少必需字段：${missing.join('、')}`);
   }
 
-  cachedDiscovery = { ts: Date.now(), doc };
+  cachedDiscovery = { ts: Date.now(), issuer, doc };
   return doc;
 }
 

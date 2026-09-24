@@ -1319,6 +1319,26 @@ function OidcTab({
     setCallback(`${window.location.origin}/api/auth/oidc/callback`);
   }, []);
 
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{
+    ok: boolean;
+    message: string;
+    warning?: string;
+  } | null>(null);
+
+  const runTest = async () => {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const r = await api.oidcTest();
+      setTestResult({ ok: r.ok, message: r.message, warning: r.warning });
+    } catch (e) {
+      setTestResult({ ok: false, message: e instanceof Error ? e.message : t('oidc.testFailed') });
+    } finally {
+      setTesting(false);
+    }
+  };
+
   return (
     <div className="space-y-3">
       <div>
@@ -1363,18 +1383,26 @@ function OidcTab({
         label={t('oidc.clientSecret')}
         hint={secretSaved ? t('oidc.secretSaved') : t('oidc.secretHint')}
       >
-        <input
-          className="field w-full"
-          type="password"
-          autoComplete="off"
-          placeholder={secretSaved ? t('oidc.secretSaved') : t('oidc.secretHint')}
-          value={secret}
-          onChange={(e) => setSecret(e.target.value)}
-          onBlur={() => {
-            if (secret.trim()) onSave({ oidcClientSecret: secret.trim() });
-            setSecret('');
-          }}
-        />
+        <div className="relative w-full">
+          <input
+            className="field w-full pr-16"
+            type="password"
+            autoComplete="off"
+            placeholder={secretSaved ? t('oidc.secretSaved') : t('oidc.secretHint')}
+            value={secret}
+            onChange={(e) => setSecret(e.target.value)}
+            onBlur={() => {
+              if (secret.trim()) onSave({ oidcClientSecret: secret.trim() });
+              setSecret('');
+            }}
+          />
+          {/* 密钥不回显是安全设计，用徽章明确「已配置」，避免被误认为保存失败 */}
+          {secretSaved && !secret ? (
+            <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] text-emerald-600 dark:text-emerald-400">
+              {t('oidc.secretConfigured')}
+            </span>
+          ) : null}
+        </div>
       </Row>
 
       <Row label={t('oidc.redirectUri')} hint={t('oidc.redirectUriHint')}>
@@ -1433,6 +1461,37 @@ function OidcTab({
           onChange={(e) => onSave({ oidcButtonLabel: e.target.value })}
         />
       </Row>
+
+      {/* 自助诊断：点一下就知道能不能拉到 IdP 元数据，不用靠报错猜 */}
+      <div className="border-t border-line pt-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <button className="btn" onClick={runTest} disabled={testing}>
+            <Icon icon="mdi:lan-connect" size={16} title={t('oidc.test')} />
+            {testing ? t('oidc.testing') : t('oidc.test')}
+          </button>
+          <span className="text-[12px] text-muted">{t('oidc.testHint')}</span>
+        </div>
+
+        {testResult ? (
+          <div
+            className={`mt-2 flex items-start gap-2 rounded-xl border px-3 py-2 text-[12px] ${
+              testResult.ok
+                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                : 'border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400'
+            }`}
+          >
+            <Icon
+              icon={testResult.ok ? 'mdi:check-circle-outline' : 'mdi:alert-circle-outline'}
+              size={16}
+              title={t('oidc.test')}
+            />
+            <div className="min-w-0 flex-1">
+              <div className="break-all">{testResult.message}</div>
+              {testResult.warning ? <div className="mt-1 break-all">{testResult.warning}</div> : null}
+            </div>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
