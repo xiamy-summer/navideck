@@ -140,43 +140,57 @@ export function SettingsPanel({ user, initialSettings, users: initialUsers }: Pr
         ) : null}
       </div>
 
-      <div className="segment mb-5">
-        {TABS.filter((tabMeta) => !tabMeta.adminOnly || isAdmin).map((tabMeta) => (
-          <button
-            key={tabMeta.id}
-            onClick={() => setTab(tabMeta.id)}
-            data-active={tab === tabMeta.id}
-            className="segment-item"
-          >
-            <Icon icon={tabMeta.icon} size={17} title={t(`tab.${tabMeta.id}`)} />
-            {t(`tab.${tabMeta.id}`)}
-          </button>
-        ))}
-      </div>
+      <div className="md:flex md:items-start md:gap-5">
+        <nav className="settings-nav mb-4 md:sticky md:top-5 md:mb-0 md:w-[188px] md:flex-none">
+          {TABS.filter((tabMeta) => !tabMeta.adminOnly || isAdmin).map((tabMeta) => (
+            <button
+              key={tabMeta.id}
+              onClick={() => setTab(tabMeta.id)}
+              data-active={tab === tabMeta.id}
+              className="settings-nav-item"
+            >
+              <Icon icon={tabMeta.icon} size={17} title="" />
+              {t(`tab.${tabMeta.id}`)}
+            </button>
+          ))}
+        </nav>
 
-      <div className="card p-5">
-        {tab === 'appearance' ? (
-          <AppearanceTab settings={settings} onSave={save} setLang={setLang} />
-        ) : null}
-        {tab === 'search' ? <SearchTab settings={settings} onSave={save} /> : null}
-        {tab === 'custom' ? <CustomTab settings={settings} onSave={save} /> : null}
-        {tab === 'data' ? (
-          <DataTab
-            toast={setToast}
-            as={as}
-            isGlobal={isGlobal}
-            settings={settings}
-            onSave={save}
-          />
-        ) : null}
-        {tab === 'users' && isAdmin ? (
-          <UsersTab users={users} setUsers={setUsers} current={user} toast={setToast} />
-        ) : null}
-        {tab === 'status' ? <StatusTab /> : null}
-        {tab === 'docker' && isAdmin ? <DockerPanel toast={setToast} /> : null}
-        {tab === 'metrics' ? <MetricsPanel /> : null}
-        {tab === 'oidc' && isAdmin ? <OidcTab settings={settings} onSave={save} isGlobal={isGlobal} /> : null}
-        {tab === 'about' ? <AboutTab /> : null}
+        <div className="min-w-0 flex-1 space-y-4">
+          {tab === 'appearance' ? (
+            <AppearanceTab settings={settings} onSave={save} setLang={setLang} />
+          ) : null}
+          {tab === 'search' ? <SearchTab settings={settings} onSave={save} /> : null}
+          {tab === 'custom' ? <CustomTab settings={settings} onSave={save} /> : null}
+          {tab === 'data' ? (
+            <DataTab
+              toast={setToast}
+              as={as}
+              isGlobal={isGlobal}
+              settings={settings}
+              onSave={save}
+            />
+          ) : null}
+          {tab === 'users' && isAdmin ? (
+            <UsersTab users={users} setUsers={setUsers} current={user} toast={setToast} />
+          ) : null}
+          {tab === 'status' ? (
+            <div className="card p-5">
+              <StatusTab />
+            </div>
+          ) : null}
+          {tab === 'docker' && isAdmin ? (
+            <div className="card p-5">
+              <DockerPanel toast={setToast} />
+            </div>
+          ) : null}
+          {tab === 'metrics' ? (
+            <div className="card p-5">
+              <MetricsPanel />
+            </div>
+          ) : null}
+          {tab === 'oidc' && isAdmin ? <OidcTab settings={settings} onSave={save} isGlobal={isGlobal} /> : null}
+          {tab === 'about' ? <AboutTab /> : null}
+        </div>
       </div>
 
       {toast ? (
@@ -190,9 +204,77 @@ export function SettingsPanel({ user, initialSettings, users: initialUsers }: Pr
 
 /* ------------------------------ 通用小组件 ------------------------------ */
 
+/** 设置分组卡片：品牌竖条标题（与首页分组一致），内部行用 divide 分隔 */
+function Section({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="settings-section">
+      <div className="settings-section-title">
+        <span className="group-rule" aria-hidden />
+        {title}
+      </div>
+      {hint ? <div className="settings-section-hint">{hint}</div> : null}
+      <div className="mt-1 divide-y divide-line/40">{children}</div>
+    </section>
+  );
+}
+
+/** 纵向字段：label 在上、控件在下，适合长 URL / 全宽输入 */
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="py-3 first:pt-3 last:pb-1">
+      <div className="text-[13px]">{label}</div>
+      {hint ? <div className="text-[11px] text-muted">{hint}</div> : null}
+      <div className="mt-1.5">{children}</div>
+    </div>
+  );
+}
+
+/** 紧凑分段切换（主题 / 内外网 / 位置等 2-3 选一） */
+function MiniSegment<T extends string>({
+  value,
+  options,
+  onChange,
+}: {
+  value: T;
+  options: Array<{ value: T; label: string }>;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="segment segment-compact">
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          className="segment-item"
+          data-active={value === o.value}
+          onClick={() => onChange(o.value)}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function Row({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 border-b border-line/60 py-3 last:border-0">
+    <div className="flex flex-wrap items-center gap-3 py-3">
       <div className="min-w-[150px]">
         <div className="text-[13px]">{label}</div>
         {hint ? <div className="text-[11px] text-muted">{hint}</div> : null}
@@ -266,195 +348,178 @@ function AppearanceTab({
     setLang(next);
   };
   return (
-    <div>
-      <Row label={t('appearance.siteTitle')}>
-        <input className="field w-56" value={settings.siteTitle} onChange={(e) => onSave({ siteTitle: e.target.value })} />
-      </Row>
+    <div className="space-y-4">
+      <Section title={t('settings.section.basic')}>
+        <Row label={t('appearance.siteTitle')}>
+          <input className="field w-56" value={settings.siteTitle} onChange={(e) => onSave({ siteTitle: e.target.value })} />
+        </Row>
+        <Row label={t('appearance.language')}>
+          <select className="field w-40" value={settings.lang} onChange={(e) => changeLang(e.target.value as Lang)}>
+            {LANGS.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.label}
+              </option>
+            ))}
+          </select>
+        </Row>
+        <Row label={t('appearance.theme')} hint={t('appearance.themeHint')}>
+          <MiniSegment
+            value={settings.theme}
+            options={[
+              { value: 'auto', label: t('theme.auto') },
+              { value: 'light', label: t('theme.light') },
+              { value: 'dark', label: t('theme.dark') },
+            ]}
+            onChange={(v) => onSave({ theme: v })}
+          />
+        </Row>
+        <Row label={t('appearance.accent')}>
+          <input
+            type="color"
+            value={settings.accent}
+            onChange={(e) => onSave({ accent: e.target.value })}
+            className="h-8 w-14 cursor-pointer rounded border border-line bg-transparent"
+          />
+          <input className="field w-28" value={settings.accent} onChange={(e) => onSave({ accent: e.target.value })} />
+        </Row>
+        <Row label={t('appearance.bgImage')} hint={t('appearance.bgImageHint')}>
+          <input
+            className="field w-64"
+            placeholder="https://…/bg.jpg"
+            value={settings.bgImage}
+            onChange={(e) => onSave({ bgImage: e.target.value })}
+          />
+        </Row>
+      </Section>
 
-      <Row label={t('appearance.theme')} hint={t('appearance.themeHint')}>
-        <div className="flex rounded-xl border border-line p-0.5 text-[13px]">
-          {(['auto', 'light', 'dark'] as const).map((m) => (
-            <button
-              key={m}
-              className={`rounded-lg px-3 py-1 ${settings.theme === m ? 'bg-brand text-white' : 'text-muted'}`}
-              onClick={() => onSave({ theme: m })}
-            >
-              {m === 'auto' ? t('theme.auto') : m === 'light' ? t('theme.light') : t('theme.dark')}
-            </button>
-          ))}
-        </div>
-      </Row>
+      <Section title={t('settings.section.layout')}>
+        <Row label={t('appearance.columns')}>
+          <Num value={settings.columns} min={2} max={12} onChange={(v) => onSave({ columns: v })} />
+        </Row>
+        <Row label={t('appearance.cardRadius')}>
+          <Num value={settings.cardRadius} min={0} max={28} suffix="px" onChange={(v) => onSave({ cardRadius: v })} />
+        </Row>
+        <Row label={t('appearance.cardOpacity')}>
+          <Num value={settings.cardOpacity} min={30} max={100} suffix="%" onChange={(v) => onSave({ cardOpacity: v })} />
+        </Row>
+        <Row label={t('appearance.iconSize')}>
+          <Num value={settings.iconSize} min={20} max={64} suffix="px" onChange={(v) => onSave({ iconSize: v })} />
+        </Row>
+        <Row label={t('appearance.showDesc')}>
+          <Switch value={settings.showDesc} onChange={(v) => onSave({ showDesc: v })} />
+        </Row>
+        <Row label={t('appearance.footer')}>
+          <Switch value={settings.footerEnabled} onChange={(v) => onSave({ footerEnabled: v })} />
+          <input
+            className="field w-64"
+            placeholder={t('appearance.footerPlaceholder')}
+            value={settings.footerText}
+            onChange={(e) => onSave({ footerText: e.target.value })}
+          />
+        </Row>
+      </Section>
 
-      <Row label={t('appearance.accent')}>
-        <input
-          type="color"
-          value={settings.accent}
-          onChange={(e) => onSave({ accent: e.target.value })}
-          className="h-8 w-14 cursor-pointer rounded border border-line bg-transparent"
-        />
-        <input className="field w-28" value={settings.accent} onChange={(e) => onSave({ accent: e.target.value })} />
-      </Row>
+      <Section title={t('settings.section.network')}>
+        <Row label={t('appearance.netMode')}>
+          <MiniSegment
+            value={settings.netMode}
+            options={[
+              { value: 'lan', label: t('net.lan') },
+              { value: 'wan', label: t('net.wan') },
+            ]}
+            onChange={(v) => onSave({ netMode: v })}
+          />
+        </Row>
+        <Row label={t('appearance.guest')} hint={t('appearance.guestHint')}>
+          <Switch value={settings.guestEnabled} onChange={(v) => onSave({ guestEnabled: v })} />
+        </Row>
+      </Section>
 
-      <Row label={t('appearance.bgImage')} hint={t('appearance.bgImageHint')}>
-        <input
-          className="field w-64"
-          placeholder="https://…/bg.jpg"
-          value={settings.bgImage}
-          onChange={(e) => onSave({ bgImage: e.target.value })}
-        />
-      </Row>
+      <Section title={t('settings.section.widgets')}>
+        <Row label={t('appearance.widgets')} hint={t('appearance.widgetsHint')}>
+          <Switch value={settings.widgetsEnabled} onChange={(v) => onSave({ widgetsEnabled: v })} />
+        </Row>
+        <Row label={t('appearance.widgetPosition')}>
+          <MiniSegment
+            value={settings.widgetPosition}
+            options={[
+              { value: 'top', label: t('appearance.positionTop') },
+              { value: 'bottom', label: t('appearance.positionBottom') },
+            ]}
+            onChange={(v) => onSave({ widgetPosition: v })}
+          />
+        </Row>
+        <Row label={t('appearance.widgetSystem')}>
+          <Switch value={settings.widgetSystem} onChange={(v) => onSave({ widgetSystem: v })} />
+        </Row>
+        <Row label={t('appearance.widgetDocker')} hint={t('appearance.widgetDockerHint')}>
+          <Switch value={settings.widgetDocker} onChange={(v) => onSave({ widgetDocker: v })} />
+        </Row>
+        <Row label={t('appearance.widgetRefresh')}>
+          <Num
+            value={settings.widgetRefresh}
+            min={5}
+            max={120}
+            suffix={t('common.second')}
+            onChange={(v) => onSave({ widgetRefresh: v })}
+          />
+        </Row>
+      </Section>
 
-      <Row label={t('appearance.language')}>
-        <select className="field w-40" value={settings.lang} onChange={(e) => changeLang(e.target.value as Lang)}>
-          {LANGS.map((l) => (
-            <option key={l.id} value={l.id}>
-              {l.label}
-            </option>
-          ))}
-        </select>
-      </Row>
-
-      <Row label={t('appearance.columns')}>
-        <Num value={settings.columns} min={2} max={12} onChange={(v) => onSave({ columns: v })} />
-      </Row>
-
-      <Row label={t('appearance.cardRadius')}>
-        <Num value={settings.cardRadius} min={0} max={28} suffix="px" onChange={(v) => onSave({ cardRadius: v })} />
-      </Row>
-
-      <Row label={t('appearance.cardOpacity')}>
-        <Num value={settings.cardOpacity} min={30} max={100} suffix="%" onChange={(v) => onSave({ cardOpacity: v })} />
-      </Row>
-
-      <Row label={t('appearance.iconSize')}>
-        <Num value={settings.iconSize} min={20} max={64} suffix="px" onChange={(v) => onSave({ iconSize: v })} />
-      </Row>
-
-      <Row label={t('appearance.showDesc')}>
-        <Switch value={settings.showDesc} onChange={(v) => onSave({ showDesc: v })} />
-      </Row>
-
-      <Row label={t('appearance.footer')}>
-        <Switch value={settings.footerEnabled} onChange={(v) => onSave({ footerEnabled: v })} />
-        <input
-          className="field w-64"
-          placeholder={t('appearance.footerPlaceholder')}
-          value={settings.footerText}
-          onChange={(e) => onSave({ footerText: e.target.value })}
-        />
-      </Row>
-
-      <Row label={t('appearance.netMode')}>
-        <div className="flex rounded-xl border border-line p-0.5 text-[13px]">
-          {(['lan', 'wan'] as const).map((m) => (
-            <button
-              key={m}
-              className={`rounded-lg px-3 py-1 ${settings.netMode === m ? 'bg-brand text-white' : 'text-muted'}`}
-              onClick={() => onSave({ netMode: m })}
-            >
-              {m === 'lan' ? t('net.lan') : t('net.wan')}
-            </button>
-          ))}
-        </div>
-      </Row>
-
-      <Row label={t('appearance.guest')} hint={t('appearance.guestHint')}>
-        <Switch value={settings.guestEnabled} onChange={(v) => onSave({ guestEnabled: v })} />
-      </Row>
-
-      <Row label={t('appearance.widgets')} hint={t('appearance.widgetsHint')}>
-        <Switch value={settings.widgetsEnabled} onChange={(v) => onSave({ widgetsEnabled: v })} />
-      </Row>
-
-      <Row label={t('appearance.widgetPosition')}>
-        <div className="flex rounded-xl border border-line p-0.5 text-[13px]">
-          {(['top', 'bottom'] as const).map((p) => (
-            <button
-              key={p}
-              className={`rounded-lg px-3 py-1 ${settings.widgetPosition === p ? 'bg-brand text-white' : 'text-muted'}`}
-              onClick={() => onSave({ widgetPosition: p })}
-            >
-              {p === 'top' ? t('appearance.positionTop') : t('appearance.positionBottom')}
-            </button>
-          ))}
-        </div>
-      </Row>
-
-      <Row label={t('appearance.widgetSystem')}>
-        <Switch value={settings.widgetSystem} onChange={(v) => onSave({ widgetSystem: v })} />
-      </Row>
-
-      <Row label={t('appearance.widgetDocker')} hint={t('appearance.widgetDockerHint')}>
-        <Switch value={settings.widgetDocker} onChange={(v) => onSave({ widgetDocker: v })} />
-      </Row>
-
-      <Row label={t('appearance.widgetRefresh')}>
-        <Num
-          value={settings.widgetRefresh}
-          min={5}
-          max={120}
-          suffix={t('common.second')}
-          onChange={(v) => onSave({ widgetRefresh: v })}
-        />
-      </Row>
-
-      <div className="my-2 border-t border-line pt-3 text-[12px] font-medium text-muted">{t('appearance.widgetExtensions')}</div>
-
-      <Row label={t('appearance.widgetClock')}>
-        <Switch value={settings.widgetClock} onChange={(v) => onSave({ widgetClock: v })} />
-      </Row>
-
-      <Row label={t('appearance.widgetWeather')}>
-        <Switch value={settings.widgetWeather} onChange={(v) => onSave({ widgetWeather: v })} />
-      </Row>
-      <Row label={t('appearance.widgetWeatherCity')} hint={t('appearance.widgetWeatherCityHint')}>
-        <input
-          className="field w-48"
-          placeholder={t('appearance.widgetWeatherCity')}
-          value={settings.widgetWeatherCity}
-          onChange={(e) => onSave({ widgetWeatherCity: e.target.value })}
-        />
-      </Row>
-
-      <Row label={t('appearance.widgetRss')}>
-        <Switch value={settings.widgetRss} onChange={(v) => onSave({ widgetRss: v })} />
-      </Row>
-      <Row label={t('appearance.widgetRssFeeds')} hint={t('appearance.widgetRssFeedsHint')}>
-        <textarea
-          className="field h-24 w-72 resize-y font-mono text-[12px]"
-          placeholder="https://example.com/feed.xml"
-          value={settings.widgetRssFeeds.join('\n')}
-          onChange={(e) =>
-            onSave({
-              widgetRssFeeds: e.target.value
-                .split('\n')
-                .map((s) => s.trim())
-                .filter(Boolean),
-            })
-          }
-        />
-      </Row>
-      <Row label={t('appearance.widgetRssMax')}>
-        <Num
-          value={settings.widgetRssMax}
-          min={1}
-          max={30}
-          suffix={t('common.items')}
-          onChange={(v) => onSave({ widgetRssMax: v })}
-        />
-      </Row>
-
-      <Row label={t('appearance.widgetNotes')}>
-        <Switch value={settings.widgetNotes} onChange={(v) => onSave({ widgetNotes: v })} />
-      </Row>
-      <Row label={t('appearance.widgetNotesText')}>
-        <textarea
-          className="field h-28 w-72 resize-y text-[12px]"
-          placeholder={"# 便签\n- 支持 **Markdown**\n- 链接 [NaviDeck](https://example.com)"}
-          value={settings.widgetNotesText}
-          onChange={(e) => onSave({ widgetNotesText: e.target.value })}
-        />
-      </Row>
+      <Section title={t('settings.section.widgetsExt')}>
+        <Row label={t('appearance.widgetClock')}>
+          <Switch value={settings.widgetClock} onChange={(v) => onSave({ widgetClock: v })} />
+        </Row>
+        <Row label={t('appearance.widgetWeather')}>
+          <Switch value={settings.widgetWeather} onChange={(v) => onSave({ widgetWeather: v })} />
+        </Row>
+        <Row label={t('appearance.widgetWeatherCity')} hint={t('appearance.widgetWeatherCityHint')}>
+          <input
+            className="field w-48"
+            placeholder={t('appearance.widgetWeatherCity')}
+            value={settings.widgetWeatherCity}
+            onChange={(e) => onSave({ widgetWeatherCity: e.target.value })}
+          />
+        </Row>
+        <Row label={t('appearance.widgetRss')}>
+          <Switch value={settings.widgetRss} onChange={(v) => onSave({ widgetRss: v })} />
+        </Row>
+        <Row label={t('appearance.widgetRssFeeds')} hint={t('appearance.widgetRssFeedsHint')}>
+          <textarea
+            className="field h-24 w-72 resize-y font-mono text-[12px]"
+            placeholder="https://example.com/feed.xml"
+            value={settings.widgetRssFeeds.join('\n')}
+            onChange={(e) =>
+              onSave({
+                widgetRssFeeds: e.target.value
+                  .split('\n')
+                  .map((s) => s.trim())
+                  .filter(Boolean),
+              })
+            }
+          />
+        </Row>
+        <Row label={t('appearance.widgetRssMax')}>
+          <Num
+            value={settings.widgetRssMax}
+            min={1}
+            max={30}
+            suffix={t('common.items')}
+            onChange={(v) => onSave({ widgetRssMax: v })}
+          />
+        </Row>
+        <Row label={t('appearance.widgetNotes')}>
+          <Switch value={settings.widgetNotes} onChange={(v) => onSave({ widgetNotes: v })} />
+        </Row>
+        <Row label={t('appearance.widgetNotesText')}>
+          <textarea
+            className="field h-28 w-72 resize-y text-[12px]"
+            placeholder={"# 便签\n- 支持 **Markdown**\n- 链接 [NaviDeck](https://example.com)"}
+            value={settings.widgetNotesText}
+            onChange={(e) => onSave({ widgetNotesText: e.target.value })}
+          />
+        </Row>
+      </Section>
     </div>
   );
 }
@@ -468,113 +533,109 @@ function SearchTab({ settings, onSave }: { settings: Settings; onSave: (p: Parti
   const updateEngines = (next: SearchEngine[]) => onSave({ searchEngines: next });
 
   return (
-    <div>
-      <Row label={t('search.enabled')}>
-        <Switch value={settings.searchEnabled} onChange={(v) => onSave({ searchEnabled: v })} />
-      </Row>
-
-      <Row label={t('search.placeholderLabel')}>
-        <input
-          className="field w-56"
-          value={settings.searchPlaceholder}
-          onChange={(e) => onSave({ searchPlaceholder: e.target.value })}
-        />
-      </Row>
-
-      <Row label={t('search.defaultEngine')}>
-        <select
-          className="field w-40"
-          value={settings.searchEngine}
-          onChange={(e) => onSave({ searchEngine: e.target.value })}
-        >
-          {engines.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.name}
-            </option>
-          ))}
-        </select>
-      </Row>
-
-      <Row label={t('search.width')}>
-        <Num value={settings.searchWidth} min={240} max={900} suffix="px" onChange={(v) => onSave({ searchWidth: v })} />
-      </Row>
-
-      <Row label={t('search.radius')}>
-        <Num value={settings.searchRadius} min={0} max={999} suffix="px" onChange={(v) => onSave({ searchRadius: v })} />
-      </Row>
-
-      <Row label={t('search.bgColor')} hint={t('search.followTheme')}>
-        <input
-          type="color"
-          value={settings.searchBg || '#ffffff'}
-          onChange={(e) => onSave({ searchBg: e.target.value })}
-          className="h-8 w-14 cursor-pointer rounded border border-line bg-transparent"
-        />
-        <button className="btn" onClick={() => onSave({ searchBg: '' })}>
-          {t('search.followTheme')}
-        </button>
-      </Row>
-
-      <Row label={t('search.textColor')} hint={t('search.followTheme')}>
-        <input
-          type="color"
-          value={settings.searchText || '#111827'}
-          onChange={(e) => onSave({ searchText: e.target.value })}
-          className="h-8 w-14 cursor-pointer rounded border border-line bg-transparent"
-        />
-        <button className="btn" onClick={() => onSave({ searchText: '' })}>
-          {t('search.followTheme')}
-        </button>
-      </Row>
-
-      <div className="mt-5 border-t border-line pt-4">
-        <div className="mb-3 flex items-center">
-          <h3 className="text-[14px] font-medium">{t('search.engines')}</h3>
-          <button
-            className="btn ml-auto"
-            onClick={() =>
-              updateEngines([
-                ...engines,
-                { id: `e${Date.now()}`, name: t('search.newEngine'), url: 'https://example.com/search?q={q}', icon: 'mdi:magnify' },
-              ])
-            }
+    <div className="space-y-4">
+      <Section title={t('search.section.behavior')}>
+        <Row label={t('search.enabled')}>
+          <Switch value={settings.searchEnabled} onChange={(v) => onSave({ searchEnabled: v })} />
+        </Row>
+        <Row label={t('search.placeholderLabel')}>
+          <input
+            className="field w-56"
+            value={settings.searchPlaceholder}
+            onChange={(e) => onSave({ searchPlaceholder: e.target.value })}
+          />
+        </Row>
+        <Row label={t('search.defaultEngine')}>
+          <select
+            className="field w-40"
+            value={settings.searchEngine}
+            onChange={(e) => onSave({ searchEngine: e.target.value })}
           >
-            <Icon icon="mdi:plus" size={16} title={t('common.add')} />
-            {t('search.newEngine')}
+            {engines.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.name}
+              </option>
+            ))}
+          </select>
+        </Row>
+        <Row label={t('search.width')}>
+          <Num value={settings.searchWidth} min={240} max={900} suffix="px" onChange={(v) => onSave({ searchWidth: v })} />
+        </Row>
+        <Row label={t('search.radius')}>
+          <Num value={settings.searchRadius} min={0} max={999} suffix="px" onChange={(v) => onSave({ searchRadius: v })} />
+        </Row>
+        <Row label={t('search.bgColor')} hint={t('search.followTheme')}>
+          <input
+            type="color"
+            value={settings.searchBg || '#ffffff'}
+            onChange={(e) => onSave({ searchBg: e.target.value })}
+            className="h-8 w-14 cursor-pointer rounded border border-line bg-transparent"
+          />
+          <button className="btn" onClick={() => onSave({ searchBg: '' })}>
+            {t('search.followTheme')}
           </button>
-        </div>
+        </Row>
+        <Row label={t('search.textColor')} hint={t('search.followTheme')}>
+          <input
+            type="color"
+            value={settings.searchText || '#111827'}
+            onChange={(e) => onSave({ searchText: e.target.value })}
+            className="h-8 w-14 cursor-pointer rounded border border-line bg-transparent"
+          />
+          <button className="btn" onClick={() => onSave({ searchText: '' })}>
+            {t('search.followTheme')}
+          </button>
+        </Row>
+      </Section>
 
-        <div className="space-y-2">
-          {engines.map((engine, index) => (
-            <div key={engine.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-line p-2">
-              <input
-                className="field w-24"
-                value={engine.name}
-                onChange={(e) => updateEngines(engines.map((x, i) => (i === index ? { ...x, name: e.target.value } : x)))}
-              />
-              <input
-                className="field min-w-[220px] flex-1"
-                value={engine.url}
-                placeholder={t('search.urlPlaceholder')}
-                onChange={(e) => updateEngines(engines.map((x, i) => (i === index ? { ...x, url: e.target.value } : x)))}
-              />
-              <input
-                className="field w-44"
-                value={engine.icon}
-                placeholder={t('search.iconPlaceholder')}
-                onChange={(e) => updateEngines(engines.map((x, i) => (i === index ? { ...x, icon: e.target.value } : x)))}
-              />
-              <button
-                className="btn btn-ghost text-red-500"
-                onClick={() => updateEngines(engines.filter((_, i) => i !== index))}
-              >
-                <Icon icon="mdi:trash-can-outline" size={17} title={t('common.delete')} />
-              </button>
-            </div>
-          ))}
+      <Section title={t('search.engines')} hint={t('search.qTip')}>
+        <div className="py-3">
+          <div className="mb-3 flex items-center">
+            <button
+              className="btn ml-auto"
+              onClick={() =>
+                updateEngines([
+                  ...engines,
+                  { id: `e${Date.now()}`, name: t('search.newEngine'), url: 'https://example.com/search?q={q}', icon: 'mdi:magnify' },
+                ])
+              }
+            >
+              <Icon icon="mdi:plus" size={16} title={t('common.add')} />
+              {t('search.newEngine')}
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            {engines.map((engine, index) => (
+              <div key={engine.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-line p-2">
+                <input
+                  className="field w-24"
+                  value={engine.name}
+                  onChange={(e) => updateEngines(engines.map((x, i) => (i === index ? { ...x, name: e.target.value } : x)))}
+                />
+                <input
+                  className="field min-w-[220px] flex-1"
+                  value={engine.url}
+                  placeholder={t('search.urlPlaceholder')}
+                  onChange={(e) => updateEngines(engines.map((x, i) => (i === index ? { ...x, url: e.target.value } : x)))}
+                />
+                <input
+                  className="field w-44"
+                  value={engine.icon}
+                  placeholder={t('search.iconPlaceholder')}
+                  onChange={(e) => updateEngines(engines.map((x, i) => (i === index ? { ...x, icon: e.target.value } : x)))}
+                />
+                <button
+                  className="btn btn-ghost text-red-500"
+                  onClick={() => updateEngines(engines.filter((_, i) => i !== index))}
+                >
+                  <Icon icon="mdi:trash-can-outline" size={17} title={t('common.delete')} />
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
-        <p className="mt-2 text-[12px] text-muted">{t('search.qTip')}</p>
-      </div>
+      </Section>
     </div>
   );
 }
@@ -584,37 +645,38 @@ function SearchTab({ settings, onSave }: { settings: Settings; onSave: (p: Parti
 function CustomTab({ settings, onSave }: { settings: Settings; onSave: (p: Partial<Settings>) => void }) {
   const { t } = useI18n();
   return (
-    <div className="space-y-5">
-      <div>
-        <div className="mb-1.5 flex items-center">
-          <h3 className="text-[14px] font-medium">{t('custom.css')}</h3>
-          <button className="btn ml-auto" onClick={() => onSave({ customCss: settings.customCss })}>
-            {t('custom.apply')}
-          </button>
+    <div className="space-y-4">
+      <Section title={t('custom.css')}>
+        <div className="py-3">
+          <textarea
+            className="field h-48 font-mono text-[12px]"
+            placeholder={t('custom.cssPlaceholder')}
+            value={settings.customCss}
+            onChange={(e) => onSave({ customCss: e.target.value })}
+          />
+          <div className="mt-3 flex justify-end">
+            <button className="btn btn-primary" onClick={() => onSave({ customCss: settings.customCss })}>
+              {t('custom.apply')}
+            </button>
+          </div>
         </div>
-        <textarea
-          className="field h-48 font-mono text-[12px]"
-          placeholder={t('custom.cssPlaceholder')}
-          value={settings.customCss}
-          onChange={(e) => onSave({ customCss: e.target.value })}
-        />
-      </div>
+      </Section>
 
-      <div>
-        <div className="mb-1.5 flex items-center">
-          <h3 className="text-[14px] font-medium">{t('custom.js')}</h3>
-          <button className="btn ml-auto" onClick={() => onSave({ customJs: settings.customJs })}>
-            {t('custom.apply')}
-          </button>
+      <Section title={t('custom.js')} hint={t('custom.tip')}>
+        <div className="py-3">
+          <textarea
+            className="field h-48 font-mono text-[12px]"
+            placeholder={t('custom.jsPlaceholder')}
+            value={settings.customJs}
+            onChange={(e) => onSave({ customJs: e.target.value })}
+          />
+          <div className="mt-3 flex justify-end">
+            <button className="btn btn-primary" onClick={() => onSave({ customJs: settings.customJs })}>
+              {t('custom.apply')}
+            </button>
+          </div>
         </div>
-        <textarea
-          className="field h-48 font-mono text-[12px]"
-          placeholder={t('custom.jsPlaceholder')}
-          value={settings.customJs}
-          onChange={(e) => onSave({ customJs: e.target.value })}
-        />
-        <p className="mt-2 text-[12px] text-muted">{t('custom.tip')}</p>
-      </div>
+      </Section>
     </div>
   );
 }
@@ -714,122 +776,123 @@ function DataTab({
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="mb-2 text-[14px] font-medium">{t('data.backup')}</h3>
-        <div className="flex flex-wrap gap-2">
-          <a className="btn" href={`/api/export${query}`} download>
-            <Icon icon="mdi:export" size={17} title={t('data.export')} />
-            {t('data.export')}
-          </a>
-          <button className="btn" onClick={() => importInput.current?.click()}>
-            <Icon icon="mdi:import" size={17} title={t('data.importMerge')} />
-            {t('data.importMerge')}
-          </button>
-          <button
-            className="btn"
-            onClick={() => {
-              if (confirm(t('data.importConfirm'))) importInput.current?.click();
+    <div className="space-y-4">
+      <Section title={t('data.backup')}>
+        <div className="py-3">
+          <div className="flex flex-wrap gap-2">
+            <a className="btn" href={`/api/export${query}`} download>
+              <Icon icon="mdi:export" size={17} title={t('data.export')} />
+              {t('data.export')}
+            </a>
+            <button className="btn" onClick={() => importInput.current?.click()}>
+              <Icon icon="mdi:import" size={17} title={t('data.importMerge')} />
+              {t('data.importMerge')}
+            </button>
+            <button
+              className="btn"
+              onClick={() => {
+                if (confirm(t('data.importConfirm'))) importInput.current?.click();
+              }}
+            >
+              {t('data.importReplace')}
+            </button>
+          </div>
+          <input
+            ref={importInput}
+            type="file"
+            accept="application/json"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void doImport(file, 'append');
+              e.target.value = '';
             }}
-          >
-            {t('data.importReplace')}
-          </button>
+          />
+          <p className="mt-2 text-[12px] text-muted">{t('data.tip')}</p>
         </div>
-        <input
-          ref={importInput}
-          type="file"
-          accept="application/json"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) void doImport(file, 'append');
-            e.target.value = '';
-          }}
-        />
-        <p className="mt-2 text-[12px] text-muted">{t('data.tip')}</p>
-      </div>
+      </Section>
 
-      <div className="border-t border-line pt-5">
-        <h3 className="mb-2 text-[14px] font-medium">{t('data.bookmarks')}</h3>
-        <div className="flex flex-wrap gap-2">
-          <button
-            className="btn"
-            onClick={() => {
-              setBookmarkMode('append');
-              bookmarkInput.current?.click();
-            }}
-          >
-            <Icon icon="mdi:bookmark-outline" size={17} title={t('data.importBookmarks')} />
-            {t('data.importBookmarks')}
-          </button>
-          <button
-            className="btn"
-            onClick={() => {
-              if (confirm(t('data.importConfirm'))) {
-                setBookmarkMode('replace');
+      <Section title={t('data.bookmarks')}>
+        <div className="py-3">
+          <div className="flex flex-wrap gap-2">
+            <button
+              className="btn"
+              onClick={() => {
+                setBookmarkMode('append');
                 bookmarkInput.current?.click();
-              }
+              }}
+            >
+              <Icon icon="mdi:bookmark-outline" size={17} title={t('data.importBookmarks')} />
+              {t('data.importBookmarks')}
+            </button>
+            <button
+              className="btn"
+              onClick={() => {
+                if (confirm(t('data.importConfirm'))) {
+                  setBookmarkMode('replace');
+                  bookmarkInput.current?.click();
+                }
+              }}
+            >
+              {t('data.bookmarksReplace')}
+            </button>
+          </div>
+          <input
+            ref={bookmarkInput}
+            type="file"
+            accept=".html,text/html"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void doImportBookmarks(file, bookmarkMode);
+              e.target.value = '';
             }}
-          >
-            {t('data.bookmarksReplace')}
-          </button>
+          />
+          <p className="mt-2 text-[12px] text-muted">{t('data.importBookmarksTip')}</p>
         </div>
-        <input
-          ref={bookmarkInput}
-          type="file"
-          accept=".html,text/html"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) void doImportBookmarks(file, bookmarkMode);
-            e.target.value = '';
-          }}
-        />
-        <p className="mt-2 text-[12px] text-muted">{t('data.importBookmarksTip')}</p>
-      </div>
+      </Section>
 
-      <div className="border-t border-line pt-5">
-        <h3 className="mb-2 text-[14px] font-medium">{t('data.sunPanel')}</h3>
-        <div className="flex flex-wrap gap-2">
-          <button
-            className="btn"
-            onClick={() => {
-              setSunPanelMode('append');
-              sunPanelInput.current?.click();
-            }}
-          >
-            <Icon icon="mdi:import" size={17} title={t('data.importSunPanel')} />
-            {t('data.importSunPanel')}
-          </button>
-          <button
-            className="btn"
-            onClick={() => {
-              if (confirm(t('data.importConfirm'))) {
-                setSunPanelMode('replace');
+      <Section title={t('data.sunPanel')}>
+        <div className="py-3">
+          <div className="flex flex-wrap gap-2">
+            <button
+              className="btn"
+              onClick={() => {
+                setSunPanelMode('append');
                 sunPanelInput.current?.click();
-              }
+              }}
+            >
+              <Icon icon="mdi:import" size={17} title={t('data.importSunPanel')} />
+              {t('data.importSunPanel')}
+            </button>
+            <button
+              className="btn"
+              onClick={() => {
+                if (confirm(t('data.importConfirm'))) {
+                  setSunPanelMode('replace');
+                  sunPanelInput.current?.click();
+                }
+              }}
+            >
+              {t('data.sunPanelReplace')}
+            </button>
+          </div>
+          <input
+            ref={sunPanelInput}
+            type="file"
+            accept=".json,application/json"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void doImportSunPanel(file, sunPanelMode);
+              e.target.value = '';
             }}
-          >
-            {t('data.sunPanelReplace')}
-          </button>
+          />
+          <p className="mt-2 text-[12px] text-muted">{t('data.importSunPanelTip')}</p>
         </div>
-        <input
-          ref={sunPanelInput}
-          type="file"
-          accept=".json,application/json"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) void doImportSunPanel(file, sunPanelMode);
-            e.target.value = '';
-          }}
-        />
-        <p className="mt-2 text-[12px] text-muted">{t('data.importSunPanelTip')}</p>
-      </div>
+      </Section>
 
-      <div className="border-t border-line pt-5">
-        <h3 className="mb-2 text-[14px] font-medium">{t('monitor.title')}</h3>
-        <p className="mb-3 text-[12px] text-muted">{t('monitor.hint')}</p>
+      <Section title={t('monitor.title')} hint={t('monitor.hint')}>
         <Row label={t('monitor.retentionDays')} hint={t('monitor.retentionDaysHint')}>
           <Num
             value={settings.metricRetentionDays}
@@ -884,11 +947,11 @@ function DataTab({
             onChange={(v) => onSave({ metricAlertCooldown: v })}
           />
         </Row>
-      </div>
+      </Section>
 
-      <div className="border-t border-line pt-5">
-        <h3 className="mb-2 text-[14px] font-medium">{t('data.backupManage')}</h3>
-        <div className="flex flex-wrap items-center gap-2">
+      <Section title={t('data.backupManage')}>
+        <div className="py-3">
+          <div className="flex flex-wrap items-center gap-2">
           <button
             className="btn"
             disabled={busy}
@@ -972,29 +1035,29 @@ function DataTab({
             ))}
           </div>
         )}
-      </div>
-
-      <div className="border-t border-line pt-5">
-        <div className="mb-2 flex items-center">
-          <h3 className="text-[14px] font-medium">{t('data.files')}</h3>
-          <button className="btn ml-auto" onClick={() => fileInput.current?.click()}>
-            <Icon icon="mdi:upload" size={17} title={t('data.upload')} />
-            {t('data.upload')}
-          </button>
         </div>
-        <input
-          ref={fileInput}
-          type="file"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) void upload(file);
-            e.target.value = '';
-          }}
-        />
-        <p className="mb-3 text-[12px] text-muted">{t('data.fileTip')}</p>
+      </Section>
 
-        {files.length === 0 ? (
+      <Section title={t('data.files')} hint={t('data.fileTip')}>
+        <div className="py-3">
+          <div className="mb-3 flex justify-end">
+            <button className="btn" onClick={() => fileInput.current?.click()}>
+              <Icon icon="mdi:upload" size={17} title={t('data.upload')} />
+              {t('data.upload')}
+            </button>
+          </div>
+          <input
+            ref={fileInput}
+            type="file"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void upload(file);
+              e.target.value = '';
+            }}
+          />
+
+          {files.length === 0 ? (
           <p className="py-4 text-center text-[13px] text-muted">{t('data.noFiles')}</p>
         ) : (
           <div className="space-y-2">
@@ -1029,23 +1092,25 @@ function DataTab({
               );
             })}
           </div>
-        )}
-      </div>
+          )}
+        </div>
+      </Section>
 
-      <div className="border-t border-line pt-5">
-        <h3 className="mb-2 text-[14px] font-medium">{t('data.reset')}</h3>
-        <button
-          className="btn btn-danger"
-          onClick={async () => {
-            if (!confirm(t('data.resetConfirm'))) return;
-            await fetch(`/api/settings/reset${as ? `?as=${as}` : ''}`, { method: 'POST' });
-            window.location.reload();
-          }}
-        >
-          {t('data.reset')}
-        </button>
-        <p className="mt-2 text-[12px] text-muted">{t('data.resetTip')}</p>
-      </div>
+      <Section title={t('data.reset')}>
+        <div className="py-3">
+          <button
+            className="btn btn-danger"
+            onClick={async () => {
+              if (!confirm(t('data.resetConfirm'))) return;
+              await fetch(`/api/settings/reset${as ? `?as=${as}` : ''}`, { method: 'POST' });
+              window.location.reload();
+            }}
+          >
+            {t('data.reset')}
+          </button>
+          <p className="mt-2 text-[12px] text-muted">{t('data.resetTip')}</p>
+        </div>
+      </Section>
     </div>
   );
 }
@@ -1070,85 +1135,87 @@ function UsersTab({
   const reload = async () => setUsers(await api.users());
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h3 className="mb-2 text-[14px] font-medium">{t('users.add')}</h3>
-        <div className="flex flex-wrap gap-2">
-          <input
-            className="field w-40"
-            placeholder={t('users.username')}
-            value={form.username}
-            onChange={(e) => setForm({ ...form, username: e.target.value })}
-          />
-          <input
-            className="field w-40"
-            type="password"
-            placeholder={t('users.password')}
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-          />
-          <select
-            className="field w-28"
-            value={form.role}
-            onChange={(e) => setForm({ ...form, role: e.target.value as Role })}
-          >
-            <option value="user">{t('users.roleUser')}</option>
-            <option value="admin">{t('users.roleAdmin')}</option>
-          </select>
-          <button
-            className="btn btn-primary"
-            onClick={async () => {
-              try {
-                await api.createUser(form.username, form.password, form.role);
-                setForm({ username: '', password: '', role: 'user' });
-                await reload();
-                toast(t('users.created'));
-              } catch (err) {
-                toast(err instanceof Error ? err.message : t('common.createFailed'));
-              }
-            }}
-          >
-            {t('users.create')}
-          </button>
+    <div className="space-y-4">
+      <Section title={t('users.add')}>
+        <div className="py-3">
+          <div className="flex flex-wrap gap-2">
+            <input
+              className="field w-40"
+              placeholder={t('users.username')}
+              value={form.username}
+              onChange={(e) => setForm({ ...form, username: e.target.value })}
+            />
+            <input
+              className="field w-40"
+              type="password"
+              placeholder={t('users.password')}
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+            />
+            <select
+              className="field w-28"
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: e.target.value as Role })}
+            >
+              <option value="user">{t('users.roleUser')}</option>
+              <option value="admin">{t('users.roleAdmin')}</option>
+            </select>
+            <button
+              className="btn btn-primary"
+              onClick={async () => {
+                try {
+                  await api.createUser(form.username, form.password, form.role);
+                  setForm({ username: '', password: '', role: 'user' });
+                  await reload();
+                  toast(t('users.created'));
+                } catch (err) {
+                  toast(err instanceof Error ? err.message : t('common.createFailed'));
+                }
+              }}
+            >
+              {t('users.create')}
+            </button>
+          </div>
         </div>
-      </div>
+      </Section>
 
-      <div className="border-t border-line pt-4">
-        <h3 className="mb-2 text-[14px] font-medium">{t('users.list')}</h3>
-        <div className="space-y-2">
-          {users.map((u) => (
-            <div key={u.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-line p-2 text-[13px]">
-              <Icon icon="mdi:account-outline" size={18} title={u.username} />
-              <span>{u.username}</span>
-              <span className="chip">
-                {u.role === 'admin' ? t('home.roleAdmin') : u.role === 'guest' ? t('home.roleGuest') : t('home.roleUser')}
-              </span>
-              {u.id === current.id ? <span className="chip">{t('home.currentLogin')}</span> : null}
+      <Section title={t('users.list')}>
+        <div className="py-3">
+          <div className="space-y-2">
+            {users.map((u) => (
+              <div key={u.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-line p-2 text-[13px]">
+                <Icon icon="mdi:account-outline" size={18} title={u.username} />
+                <span>{u.username}</span>
+                <span className="chip">
+                  {u.role === 'admin' ? t('home.roleAdmin') : u.role === 'guest' ? t('home.roleGuest') : t('home.roleUser')}
+                </span>
+                {u.id === current.id ? <span className="chip">{t('home.currentLogin')}</span> : null}
 
-              <div className="ml-auto flex gap-1">
-                {u.role !== 'guest' ? (
-                  <button className="btn btn-ghost" onClick={() => setEditPw({ id: u.id, password: '' })}>
-                    {t('users.resetPassword')}
-                  </button>
-                ) : null}
-                {u.role !== 'guest' && u.id !== current.id ? (
-                  <button
-                    className="btn btn-ghost text-red-500"
-                    onClick={async () => {
-                      if (!confirm(t('users.deleteConfirm', { name: u.username }))) return;
-                      await api.deleteUser(u.id);
-                      await reload();
-                      toast(t('common.deleted'));
-                    }}
-                  >
-                    {t('common.delete')}
-                  </button>
-                ) : null}
+                <div className="ml-auto flex gap-1">
+                  {u.role !== 'guest' ? (
+                    <button className="btn btn-ghost" onClick={() => setEditPw({ id: u.id, password: '' })}>
+                      {t('users.resetPassword')}
+                    </button>
+                  ) : null}
+                  {u.role !== 'guest' && u.id !== current.id ? (
+                    <button
+                      className="btn btn-ghost text-red-500"
+                      onClick={async () => {
+                        if (!confirm(t('users.deleteConfirm', { name: u.username }))) return;
+                        await api.deleteUser(u.id);
+                        await reload();
+                        toast(t('common.deleted'));
+                      }}
+                    >
+                      {t('common.delete')}
+                    </button>
+                  ) : null}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      </Section>
 
       {editPw ? (
         <div className="modal-backdrop" onClick={() => setEditPw(null)}>
@@ -1329,16 +1396,27 @@ function StatusTab() {
 function AboutTab() {
   const { t } = useI18n();
   return (
-    <div className="space-y-3 text-[13px] leading-relaxed">
-      <p className="font-medium">{t('about.version', { version: APP_VERSION })}</p>
-      <p className="text-muted">{t('about.desc')}</p>
-      <ul className="list-inside list-disc space-y-1 text-muted">
-        <li>{t('about.featureStorage')}</li>
-        <li>{t('about.featureDeploy')}</li>
-        <li>{t('about.featureIcon')}</li>
-        <li>{t('about.featureNext')}</li>
-      </ul>
-    </div>
+    <Section title="NaviDeck">
+      <div className="py-3">
+        <div className="flex items-center gap-3">
+          <div className="icon-tile">
+            <Icon icon="mdi:radar" size={26} title="NaviDeck" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 text-[16px] font-medium">
+              NaviDeck <span className="count-badge">v{APP_VERSION}</span>
+            </div>
+            <div className="text-[12px] text-muted">{t('about.desc')}</div>
+          </div>
+        </div>
+        <ul className="mt-4 list-inside list-disc space-y-1 text-[13px] text-muted">
+          <li>{t('about.featureStorage')}</li>
+          <li>{t('about.featureDeploy')}</li>
+          <li>{t('about.featureIcon')}</li>
+          <li>{t('about.featureNext')}</li>
+        </ul>
+      </div>
+    </Section>
   );
 }
 
@@ -1392,12 +1470,7 @@ function OidcTab({
   };
 
   return (
-    <div className="space-y-3">
-      <div>
-        <h3 className="text-[14px] font-medium">{t('oidc.title')}</h3>
-        <p className="mt-1 text-[12px] text-muted">{t('oidc.hint')}</p>
-      </div>
-
+    <div className="space-y-4">
       {warning ? (
         <div className="flex items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-700 dark:text-amber-300">
           <Icon icon="mdi:alert-outline" size={16} title={t('common.hint')} />
@@ -1410,140 +1483,140 @@ function OidcTab({
         <code className="ml-1 break-all text-[12px]">{callback}</code>
       </div>
 
-      <Row label={t('oidc.enabled')} hint={t('oidc.enabledHint')}>
-        <Switch value={settings.oidcEnabled} onChange={(v) => onSave({ oidcEnabled: v })} />
-      </Row>
+      <Section title={t('oidc.section.connection')}>
+        <Row label={t('oidc.enabled')} hint={t('oidc.enabledHint')}>
+          <Switch value={settings.oidcEnabled} onChange={(v) => onSave({ oidcEnabled: v })} />
+        </Row>
 
-      <Row label={t('oidc.issuer')} hint={t('oidc.issuerHint')}>
-        <input
-          className="field w-full"
-          placeholder="https://auth.example.com"
-          value={settings.oidcIssuer}
-          onChange={(e) => onSave({ oidcIssuer: e.target.value.trim() })}
-        />
-      </Row>
-
-      <Row label={t('oidc.clientId')} hint={t('oidc.clientIdHint')}>
-        <input
-          className="field w-full"
-          value={settings.oidcClientId}
-          onChange={(e) => onSave({ oidcClientId: e.target.value.trim() })}
-        />
-      </Row>
-
-      <Row
-        label={t('oidc.clientSecret')}
-        hint={secretSaved ? t('oidc.secretSaved') : t('oidc.secretHint')}
-      >
-        <div className="relative w-full">
+        <Field label={t('oidc.issuer')} hint={t('oidc.issuerHint')}>
           <input
-            className="field w-full pr-16"
-            type="password"
-            autoComplete="off"
-            placeholder={secretSaved ? t('oidc.secretSaved') : t('oidc.secretHint')}
-            value={secret}
-            onChange={(e) => setSecret(e.target.value)}
-            onBlur={() => {
-              if (secret.trim()) onSave({ oidcClientSecret: secret.trim() });
-              setSecret('');
-            }}
+            className="field w-full"
+            placeholder="https://auth.example.com"
+            value={settings.oidcIssuer}
+            onChange={(e) => onSave({ oidcIssuer: e.target.value.trim() })}
           />
-          {/* 密钥不回显是安全设计，用徽章明确「已配置」，避免被误认为保存失败 */}
-          {secretSaved && !secret ? (
-            <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] text-emerald-600 dark:text-emerald-400">
-              {t('oidc.secretConfigured')}
-            </span>
-          ) : null}
-        </div>
-      </Row>
+        </Field>
 
-      <Row label={t('oidc.redirectUri')} hint={t('oidc.redirectUriHint')}>
-        <input
-          className="field w-full"
-          placeholder={callback}
-          value={settings.oidcRedirectUri}
-          onChange={(e) => onSave({ oidcRedirectUri: e.target.value.trim() })}
-        />
-      </Row>
+        <Field label={t('oidc.clientId')} hint={t('oidc.clientIdHint')}>
+          <input
+            className="field w-full"
+            value={settings.oidcClientId}
+            onChange={(e) => onSave({ oidcClientId: e.target.value.trim() })}
+          />
+        </Field>
 
-      <Row label={t('oidc.scopes')} hint={t('oidc.scopesHint')}>
-        <input
-          className="field w-full"
-          value={settings.oidcScopes}
-          onChange={(e) => onSave({ oidcScopes: e.target.value })}
-        />
-      </Row>
-
-      <Row label={t('oidc.defaultRole')} hint={t('oidc.defaultRoleHint')}>
-        <select
-          className="field w-40"
-          value={settings.oidcDefaultRole || 'user'}
-          onChange={(e) => onSave({ oidcDefaultRole: e.target.value })}
+        <Field
+          label={t('oidc.clientSecret')}
+          hint={secretSaved ? t('oidc.secretSaved') : t('oidc.secretHint')}
         >
-          <option value="user">{t('oidc.roleUser')}</option>
-          <option value="admin">{t('oidc.roleAdmin')}</option>
-        </select>
-      </Row>
+          <div className="relative">
+            <input
+              className="field w-full pr-16"
+              type="password"
+              autoComplete="off"
+              placeholder={secretSaved ? t('oidc.secretSaved') : t('oidc.secretHint')}
+              value={secret}
+              onChange={(e) => setSecret(e.target.value)}
+              onBlur={() => {
+                if (secret.trim()) onSave({ oidcClientSecret: secret.trim() });
+                setSecret('');
+              }}
+            />
+            {/* 密钥不回显是安全设计，用徽章明确「已配置」，避免被误认为保存失败 */}
+            {secretSaved && !secret ? (
+              <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] text-emerald-600 dark:text-emerald-400">
+                {t('oidc.secretConfigured')}
+              </span>
+            ) : null}
+          </div>
+        </Field>
 
-      <div className="border-t border-line pt-3">
-        <p className="mb-2 text-[12px] text-muted">{t('oidc.adminRuleHint')}</p>
-        <Row label={t('oidc.adminClaim')} hint={t('oidc.adminClaimHint')}>
+        <Field label={t('oidc.redirectUri')} hint={t('oidc.redirectUriHint')}>
+          <input
+            className="field w-full"
+            placeholder={callback}
+            value={settings.oidcRedirectUri}
+            onChange={(e) => onSave({ oidcRedirectUri: e.target.value.trim() })}
+          />
+        </Field>
+
+        <Field label={t('oidc.scopes')} hint={t('oidc.scopesHint')}>
+          <input
+            className="field w-full"
+            value={settings.oidcScopes}
+            onChange={(e) => onSave({ oidcScopes: e.target.value })}
+          />
+        </Field>
+
+        <Row label={t('oidc.defaultRole')} hint={t('oidc.defaultRoleHint')}>
+          <select
+            className="field w-40"
+            value={settings.oidcDefaultRole || 'user'}
+            onChange={(e) => onSave({ oidcDefaultRole: e.target.value })}
+          >
+            <option value="user">{t('oidc.roleUser')}</option>
+            <option value="admin">{t('oidc.roleAdmin')}</option>
+          </select>
+        </Row>
+
+        <Field label={t('oidc.buttonLabel')} hint={t('oidc.buttonLabelHint')}>
+          <input
+            className="field w-full"
+            placeholder={t('login.sso')}
+            value={settings.oidcButtonLabel}
+            onChange={(e) => onSave({ oidcButtonLabel: e.target.value })}
+          />
+        </Field>
+      </Section>
+
+      <Section title={t('oidc.section.adminRule')} hint={t('oidc.adminRuleHint')}>
+        <Field label={t('oidc.adminClaim')} hint={t('oidc.adminClaimHint')}>
           <input
             className="field w-full"
             placeholder="groups"
             value={settings.oidcAdminClaim}
             onChange={(e) => onSave({ oidcAdminClaim: e.target.value.trim() })}
           />
-        </Row>
-        <Row label={t('oidc.adminValue')} hint={t('oidc.adminValueHint')}>
+        </Field>
+        <Field label={t('oidc.adminValue')} hint={t('oidc.adminValueHint')}>
           <input
             className="field w-full"
             placeholder="navideck-admins"
             value={settings.oidcAdminValue}
             onChange={(e) => onSave({ oidcAdminValue: e.target.value.trim() })}
           />
-        </Row>
-      </div>
-
-      <Row label={t('oidc.buttonLabel')} hint={t('oidc.buttonLabelHint')}>
-        <input
-          className="field w-full"
-          placeholder={t('login.sso')}
-          value={settings.oidcButtonLabel}
-          onChange={(e) => onSave({ oidcButtonLabel: e.target.value })}
-        />
-      </Row>
+        </Field>
+      </Section>
 
       {/* 自助诊断：点一下就知道能不能拉到 IdP 元数据，不用靠报错猜 */}
-      <div className="border-t border-line pt-3">
-        <div className="flex flex-wrap items-center gap-2">
+      <Section title={t('oidc.section.diagnostics')} hint={t('oidc.testHint')}>
+        <div className="py-3">
           <button className="btn" onClick={runTest} disabled={testing}>
             <Icon icon="mdi:lan-connect" size={16} title={t('oidc.test')} />
             {testing ? t('oidc.testing') : t('oidc.test')}
           </button>
-          <span className="text-[12px] text-muted">{t('oidc.testHint')}</span>
-        </div>
 
-        {testResult ? (
-          <div
-            className={`mt-2 flex items-start gap-2 rounded-xl border px-3 py-2 text-[12px] ${
-              testResult.ok
-                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
-                : 'border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400'
-            }`}
-          >
-            <Icon
-              icon={testResult.ok ? 'mdi:check-circle-outline' : 'mdi:alert-circle-outline'}
-              size={16}
-              title={t('oidc.test')}
-            />
-            <div className="min-w-0 flex-1">
-              <div className="break-all">{testResult.message}</div>
-              {testResult.warning ? <div className="mt-1 break-all">{testResult.warning}</div> : null}
+          {testResult ? (
+            <div
+              className={`mt-2 flex items-start gap-2 rounded-xl border px-3 py-2 text-[12px] ${
+                testResult.ok
+                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                  : 'border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400'
+              }`}
+            >
+              <Icon
+                icon={testResult.ok ? 'mdi:check-circle-outline' : 'mdi:alert-circle-outline'}
+                size={16}
+                title={t('oidc.test')}
+              />
+              <div className="min-w-0 flex-1">
+                <div className="break-all">{testResult.message}</div>
+                {testResult.warning ? <div className="mt-1 break-all">{testResult.warning}</div> : null}
+              </div>
             </div>
-          </div>
-        ) : null}
-      </div>
+          ) : null}
+        </div>
+      </Section>
     </div>
   );
 }
