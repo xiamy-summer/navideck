@@ -25,6 +25,9 @@ SKIP_DIRS = {'node_modules', '.next', '.data', '.git', '.workbuddy', 'logs'}
 SKIP_FILES = {'.DS_Store', '.navideck.pid', 'next-env.d.ts'}
 # 这些后缀的文件视为构建产物，绝不进入仓库；远端若残留则一并删除
 SKIP_SUFFIXES = ('.zip', '.tsbuildinfo')
+# 二进制资源白名单：Git blob 本身支持任意二进制，这里显式放行需要的静态资源
+# （collect 默认靠 utf-8 解码探测文本文件，二进制会被误跳过）
+ALLOWED_BINARY_SUFFIXES = ('.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico')
 API = f'https://api.github.com/repos/{REPO}'
 HEADERS = {
     'Authorization': f'Bearer {TOKEN}',
@@ -61,6 +64,9 @@ def collect():
             rel = os.path.relpath(full, ROOT).replace(os.sep, '/')
             with open(full, 'rb') as fh:
                 raw = fh.read()
+            if name.endswith(ALLOWED_BINARY_SUFFIXES):
+                out[rel] = raw
+                continue
             try:
                 raw.decode('utf-8')
             except UnicodeDecodeError:
