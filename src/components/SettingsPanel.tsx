@@ -53,6 +53,13 @@ export function SettingsPanel({ user, initialSettings, users: initialUsers }: Pr
 
   const isAdmin = user.role === 'admin';
 
+  // 个人导航栏通常只有「自己 + 访客」，此时「全局默认」与「用户: 自己」都是冗余项
+  // （后者与「我的配置」指向同一账号）。仅当存在其他真实用户时才展示完整的目标切换。
+  const otherRealUsers = users.filter((u) => u.role !== 'guest' && u.id !== user.id);
+  const multiUser = otherRealUsers.length > 0;
+  const guestUser = users.find((u) => u.role === 'guest');
+  const showTargetPicker = isAdmin && (multiUser || Boolean(guestUser));
+
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(null), 2200);
@@ -99,19 +106,23 @@ export function SettingsPanel({ user, initialSettings, users: initialUsers }: Pr
         </button>
         <h1 className="text-[17px] font-medium">{t('settings.title')}</h1>
 
-        {isAdmin ? (
+        {showTargetPicker ? (
           <select
             className="field ml-auto w-auto"
             value={isGlobal ? 'global' : as === null ? 'self' : String(as)}
             onChange={(e) => selectTarget(e.target.value)}
           >
             <option value="self">{t('settings.targetSelf')}</option>
-            <option value="global">{t('settings.targetGlobal')}</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.role === 'guest' ? t('home.editGuest') : t('users.userLabel', { name: u.username })}
-              </option>
-            ))}
+            {/* 「全局默认」与「代管其他用户」只在多用户场景下才有意义 */}
+            {multiUser ? <option value="global">{t('settings.targetGlobal')}</option> : null}
+            {multiUser
+              ? otherRealUsers.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {t('users.userLabel', { name: u.username })}
+                  </option>
+                ))
+              : null}
+            {guestUser ? <option value={guestUser.id}>{t('home.editGuest')}</option> : null}
           </select>
         ) : null}
       </div>
