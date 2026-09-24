@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { buildAuthorizeUrl, genPkce, genRandom, getOidcConfig } from '@/lib/oidc';
+import { buildAuthorizeUrl, genPkce, genRandom, getOidcConfig, resolveOrigin } from '@/lib/oidc';
 import { fail } from '@/lib/api';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
-  const origin = new URL(req.url).origin;
+  const origin = resolveOrigin(req);
   const redirectUri = `${origin}/api/auth/oidc/callback`;
   const cfg = getOidcConfig(redirectUri);
   if (!cfg) return fail('单点登录未启用', 400);

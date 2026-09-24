@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import crypto from 'node:crypto';
-import { exchangeAndVerify, getOidcConfig } from '@/lib/oidc';
+import { exchangeAndVerify, getOidcConfig, resolveOrigin } from '@/lib/oidc';
 import { fail } from '@/lib/api';
 import { createUser, getUserByName } from '@/lib/db';
 import { signToken } from '@/lib/auth';
@@ -10,7 +10,7 @@ import { seedDemo } from '@/lib/bootstrap';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
-  const origin = new URL(req.url).origin;
+  const origin = resolveOrigin(req);
   const redirectUri = `${origin}/api/auth/oidc/callback`;
   const url = new URL(req.url);
   const code = url.searchParams.get('code');

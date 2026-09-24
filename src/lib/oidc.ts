@@ -16,6 +16,24 @@ export interface OidcConfig {
   buttonLabel: string;
 }
 
+/**
+ * 推断「对外访问」的 origin。
+ *
+ * 反向代理（Cloudflare Tunnel / Nginx / 群晖反代）后面，`new URL(req.url).origin` 拿到的
+ * 往往是容器内部监听地址（如 https://0.0.0.0:3000，对应 compose 的 HOSTNAME=0.0.0.0），
+ * 用它拼出来的 redirect_uri 会与 IdP 登记值不匹配，表现为群晖日志里的
+ * 「redirect URIs ... do not match」。因此必须优先采用代理写入的 X-Forwarded-* 头。
+ */
+export function resolveOrigin(req: Request): string {
+  const forwardedHost = req.headers.get('x-forwarded-host');
+  if (forwardedHost) {
+    const proto = req.headers.get('x-forwarded-proto') ?? 'https';
+    const host = forwardedHost.split(',')[0].trim();
+    return `${proto}://${host}`;
+  }
+  return new URL(req.url).origin;
+}
+
 // 缓存必须绑定 issuer：否则管理员改了 Issuer 后会在一小时内继续命中旧文档，排查时极易误判
 let cachedDiscovery: { ts: number; issuer: string; doc: Record<string, unknown> } | null = null;
 
@@ -49,7 +67,9 @@ export function getOidcConfig(overrideRedirectUri?: string): OidcConfig | null {
     issuer,
     clientId,
     clientSecret,
-    redirectUri: overrideRedirectUri || s?.oidcRedirectUri || process.env.OIDC_REDIRECT_URI || '',
+    // 显式配置优先：管理员在设置页填了回调地址就以它为准，
+    // 避免反向代理下自动推断出的内部地址覆盖掉正确值
+    redirectUri: s?.oidcRedirectUri || overrideRedirectUri || process.env.OIDC_REDIRECT_URI || '',
     scopes: s?.oidcScopes || process.env.OIDC_SCOPES || 'openid email profile',
     defaultRole: (s?.oidcDefaultRole || process.env.OIDC_DEFAULT_ROLE) === 'admin' ? 'admin' : 'user',
     adminClaim: s?.oidcAdminClaim || process.env.OIDC_ADMIN_CLAIM || '',
