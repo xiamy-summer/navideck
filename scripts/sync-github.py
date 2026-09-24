@@ -16,8 +16,26 @@ import sys
 import urllib.error
 import urllib.request
 
-TOKEN = sys.argv[1] if len(sys.argv) > 1 else os.environ.get('GITHUB_TOKEN', '')
-REPO = sys.argv[2] if len(sys.argv) > 2 else 'xiamy-summer/navideck'
+# 参数解析：python3 scripts/sync-github.py <token> [owner/repo] [-m "提交说明"]
+# GitHub Actions 的运行标题取自提交信息首行；用 -m 写明本次改了什么，
+# 才能在 Actions 列表里一眼分辨每次构建（否则全是「同步本地改动」）。
+COMMIT_MESSAGE = None
+_positional = []
+_i = 1
+while _i < len(sys.argv):
+    _arg = sys.argv[_i]
+    if _arg in ('-m', '--message'):
+        if _i + 1 >= len(sys.argv):
+            print('error: -m/--message 缺少取值')
+            sys.exit(1)
+        COMMIT_MESSAGE = sys.argv[_i + 1]
+        _i += 2
+        continue
+    _positional.append(_arg)
+    _i += 1
+
+TOKEN = _positional[0] if _positional else os.environ.get('GITHUB_TOKEN', '')
+REPO = _positional[1] if len(_positional) > 1 else 'xiamy-summer/navideck'
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BRANCH = 'main'
 
@@ -75,6 +93,27 @@ def collect():
     return out
 
 
+def summarize(changed):
+    """未显式指定 -m 时，依据改动文件生成一条能说明范围的提交说明。"""
+    if not changed:
+        return 'chore: 同步本地改动'
+
+    tops = []
+    for path in changed:
+        clean = path.replace('  (delete)', '')
+        parts = clean.split('/')
+        top = parts[0] if len(parts) > 1 else '(根目录)'
+        if parts[0] == 'src' and len(parts) > 2:
+            top = 'src/' + parts[1]
+        if top not in tops:
+            tops.append(top)
+
+    shown = '、'.join(tops[:4])
+    if len(tops) > 4:
+        shown += f' 等 {len(tops)} 处'
+    return f'chore: 同步本地改动（{len(changed)} 个文件：{shown}）'
+
+
 def main():
     if not TOKEN:
         print('缺少 token')
@@ -111,8 +150,9 @@ def main():
         return 0
 
     tree = call('/git/trees', {'base_tree': base_tree, 'tree': entries})
+    message = COMMIT_MESSAGE or summarize(changed)
     commit = call('/git/commits', {
-        'message': 'chore: 同步本地改动',
+        'message': message,
         'tree': tree['sha'],
         'parents': [head],
     })
@@ -121,6 +161,7 @@ def main():
     print(f'已提交 {len(entries)} 个文件：')
     for p in changed:
         print('  -', p)
+    print('message:', message)
     print('commit:', commit['sha'][:8])
     print('下一次镜像构建已触发（单次）')
     return 0
