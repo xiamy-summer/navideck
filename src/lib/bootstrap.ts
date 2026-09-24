@@ -7,7 +7,9 @@ import {
   getUserByName,
   listGroups,
   saveUserSettings,
+  updateUser,
 } from './db';
+import { isWeakPassword } from './weakPassword';
 
 const DEMO: Array<{ name: string; icon: string; items: Array<[string, string, string]> }> = [
   {
@@ -64,6 +66,10 @@ export function ensureBootstrap() {
   if (countUsers() === 0) {
     const password = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123';
     const admin = createUser('admin', password, 'admin');
+    // 默认密码（或弱密码）建档时直接标记，前端登录后提示立即修改
+    if (isWeakPassword(password, 'admin123')) {
+      updateUser(admin.id, { mustChangePassword: 1 });
+    }
     seedDemo(admin.id);
     saveUserSettings(0, {});
     console.log(`[nas-nav] 已创建管理员账号：admin / ${password}（请登录后立即修改密码）`);

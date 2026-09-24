@@ -43,6 +43,8 @@ export const enUS: Record<string, string> = {
   'home.editHint': 'Edit mode: drag cards and groups to reorder, use the pencil to modify, plus to add.',
   'home.newGroup': 'New group',
   'home.guestView': 'Guest view (read only)',
+  'home.weakPassword': 'Your password is too weak (possibly still the default). Change it now to prevent unauthorized access.',
+  'home.weakPasswordAction': 'Change now',
   'home.emptyTitle': 'No groups yet',
   'home.emptyGuest': 'Sign in to customize',
   'home.firstGroup': 'Create the first group',

@@ -1,6 +1,7 @@
 import { getCurrentUser, signToken, setSessionCookie } from '@/lib/auth';
 import { getAuthUser, updateUser } from '@/lib/db';
 import { fail, handle, ok, readJson } from '@/lib/api';
+import { isWeakPassword } from '@/lib/weakPassword';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +14,9 @@ export async function POST(req: Request) {
     const row = getAuthUser(me.username)!;
     const { verifyPassword } = await import('@/lib/db');
     if (!verifyPassword(oldPassword ?? '', row.passwordHash)) return fail('原密码不正确');
-    updateUser(me.id, { password: newPassword });
+    // 改密后若新密码仍是弱密码，保留标记继续提示
+    const stillWeak = isWeakPassword(newPassword, process.env.DEFAULT_ADMIN_PASSWORD);
+    updateUser(me.id, { password: newPassword, mustChangePassword: stillWeak ? 1 : 0 });
     const fresh = getAuthUser(me.username)!;
     await setSessionCookie(await signToken(fresh));
     return ok({ success: true });

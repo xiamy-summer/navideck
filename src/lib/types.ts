@@ -6,6 +6,8 @@ export interface User {
   role: Role;
   avatar: string | null;
   createdAt: number;
+  /** 1 表示密码过弱（如仍是默认密码），前端应提示立即修改 */
+  mustChangePassword?: number;
 }
 
 export interface UserRow extends User {

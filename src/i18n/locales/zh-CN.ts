@@ -43,6 +43,8 @@ export const zhCN: Record<string, string> = {
   'home.editHint': '编辑模式：可直接拖动卡片与分组排序，点击卡片上的铅笔修改，加号新增。',
   'home.newGroup': '新增分组',
   'home.guestView': '当前为访客浏览（只读）',
+  'home.weakPassword': '当前密码强度过低（可能仍是默认密码），建议立即修改，以免被他人登录。',
+  'home.weakPasswordAction': '立即修改',
   'home.emptyTitle': '还没有任何分组',
   'home.emptyGuest': '登录后可自定义',
   'home.firstGroup': '创建第一个分组',

@@ -41,6 +41,7 @@ function migrate(db: Database.Database) {
       role TEXT NOT NULL DEFAULT 'user',
       avatar TEXT,
       tokenVersion INTEGER NOT NULL DEFAULT 1,
+      mustChangePassword INTEGER NOT NULL DEFAULT 0,
       createdAt INTEGER NOT NULL
     );
     CREATE TABLE IF NOT EXISTS groups (
@@ -115,6 +116,12 @@ function migrate(db: Database.Database) {
   }
   if (!itemCols.some((c) => c.name === 'container')) {
     db.exec('ALTER TABLE items ADD COLUMN container TEXT');
+  }
+
+  // 旧库升级：为已有 users 表补上弱密码标记列
+  const userCols = db.prepare('PRAGMA table_info(users)').all() as Array<{ name: string }>;
+  if (!userCols.some((c) => c.name === 'mustChangePassword')) {
+    db.exec('ALTER TABLE users ADD COLUMN mustChangePassword INTEGER NOT NULL DEFAULT 0');
   }
 }
 
@@ -208,7 +215,13 @@ export function listUsers(): User[] {
 
 export function updateUser(
   id: number,
-  patch: { username?: string; password?: string; role?: Role; avatar?: string | null },
+  patch: {
+    username?: string;
+    password?: string;
+    role?: Role;
+    avatar?: string | null;
+    mustChangePassword?: number;
+  },
 ): User | null {
   const sets: string[] = [];
   const args: unknown[] = [];
@@ -227,6 +240,10 @@ export function updateUser(
   if (patch.avatar !== undefined) {
     sets.push('avatar = ?');
     args.push(patch.avatar);
+  }
+  if (patch.mustChangePassword !== undefined) {
+    sets.push('mustChangePassword = ?');
+    args.push(patch.mustChangePassword);
   }
   if (!sets.length) return getUserById(id);
   args.push(id);

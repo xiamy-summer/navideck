@@ -2,7 +2,8 @@ import { ensureBootstrap } from '@/lib/bootstrap';
 import { getAuthUser, verifyPassword } from '@/lib/db';
 import { signToken, setSessionCookie } from '@/lib/auth';
 import { fail, handle, ok, readJson } from '@/lib/api';
-import { getUserById } from '@/lib/db';
+import { getUserById, updateUser } from '@/lib/db';
+import { isWeakPassword } from '@/lib/weakPassword';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,6 +31,11 @@ export async function POST(req: Request) {
     const row = getAuthUser(username);
     if (!row || row.role === 'guest' || !verifyPassword(password, row.passwordHash)) {
       return fail('用户名或密码错误', 401);
+    }
+    // 登录成功时才能看到明文密码，就地判定强弱并打标记（不阻断登录，仅前端提示）
+    const weak = isWeakPassword(password, process.env.DEFAULT_ADMIN_PASSWORD);
+    if (weak !== (row.mustChangePassword === 1)) {
+      updateUser(row.id, { mustChangePassword: weak ? 1 : 0 });
     }
     const token = await signToken({ id: row.id, username: row.username, role: row.role, tokenVersion: row.tokenVersion });
     await setSessionCookie(token);

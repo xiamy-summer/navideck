@@ -92,6 +92,11 @@ export function HomeView({
   const [menuOpen, setMenuOpen] = useState(false);
   const [pwForm, setPwForm] = useState<{ oldPassword: string; newPassword: string } | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  /** 密码过弱提示：镜像服务端 user.mustChangePassword，改密后重新拉取最新状态 */
+  const [weakPw, setWeakPw] = useState(() => user?.mustChangePassword === 1);
+  useEffect(() => {
+    setWeakPw(user?.mustChangePassword === 1);
+  }, [user]);
 
   const allItems = useMemo(() => groups.flatMap((g) => g.items), [groups]);
 
@@ -352,6 +357,16 @@ export function HomeView({
         <SearchBar settings={settings} items={allItems} onOpenItem={openItem} />
       </header>
 
+      {weakPw ? (
+        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[13px] text-amber-700 dark:text-amber-300">
+          <Icon icon="mdi:shield-alert-outline" size={18} title={t('home.weakPassword')} />
+          <span className="min-w-0 flex-1">{t('home.weakPassword')}</span>
+          <button className="btn" onClick={() => setPwForm({ oldPassword: '', newPassword: '' })}>
+            {t('home.weakPasswordAction')}
+          </button>
+        </div>
+      ) : null}
+
       {settings.widgetsEnabled && settings.widgetPosition === 'top' ? (
         <Widgets settings={settings} />
       ) : null}
@@ -509,6 +524,13 @@ export function HomeView({
                     await api.changePassword(pwForm.oldPassword, pwForm.newPassword);
                     setPwForm(null);
                     setToast(t('common.passwordUpdated'));
+                    // 重新拉取当前用户：新密码若仍弱则保留提示
+                    try {
+                      const me = await api.me();
+                      setWeakPw(me.user?.mustChangePassword === 1);
+                    } catch {
+                      setWeakPw(false);
+                    }
                   } catch (err) {
                     setToast(err instanceof Error ? err.message : t('common.updateFailed'));
                   }
