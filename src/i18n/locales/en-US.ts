@@ -90,6 +90,8 @@ export const enUS: Record<string, string> = {
   'dialog.icon.use': 'Use',
   'dialog.icon.searching': 'Searching…',
   'dialog.icon.clickToSelect': 'Click to choose an icon',
+  'dialog.icon.upload': 'Upload a local image as icon',
+  'dialog.icon.uploadFailed': 'Icon upload failed',
   'dialog.icon.tip': 'Icons from Iconify (200k+). Falls back to the first letter offline.',
   'dialog.password.title': 'Change password',
   'dialog.password.old': 'Current password',

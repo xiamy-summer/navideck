@@ -90,6 +90,8 @@ export const zhCN: Record<string, string> = {
   'dialog.icon.use': '使用',
   'dialog.icon.searching': '搜索中…',
   'dialog.icon.clickToSelect': '点击选择图标',
+  'dialog.icon.upload': '上传本地图片作为图标',
+  'dialog.icon.uploadFailed': '图标上传失败',
   'dialog.icon.tip': '图标来自 Iconify，共 20 万+ 图标；离线环境可用首字占位。',
   'dialog.password.title': '修改密码',
   'dialog.password.old': '当前密码',

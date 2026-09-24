@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon, ICONIFY_API, iconUrl } from './Icon';
 import { useI18n } from '@/i18n';
+import { api } from '@/lib/api-client';
 
 const PRESETS = [
   'mdi:home-outline',
@@ -92,13 +93,47 @@ export function IconPicker({ value, onChange, label }: Props) {
 
   const list = useMemo(() => (results.length ? results : PRESETS), [results]);
 
+  const uploadInput = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  /** 上传本地图片当作图标：存到 DATA_DIR/uploads，图标值记为 /api/files/<hash>.<ext> */
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const rec = await api.uploadFile(file);
+      onChange(`/api/files/${rec.path}`);
+    } catch {
+      setUploadError(t('dialog.icon.uploadFailed'));
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <div>
       <div className="mb-1.5 block text-[13px] text-muted">{label ?? t('dialog.item.icon')}</div>
-      <button type="button" className="btn w-full justify-start" onClick={() => setOpen(true)}>
-        <Icon icon={value} size={22} title={value || '图'} />
-        <span className="truncate">{value || t('dialog.icon.clickToSelect')}</span>
-      </button>
+      <div className="flex gap-2">
+        <button type="button" className="btn min-w-0 flex-1 justify-start" onClick={() => setOpen(true)}>
+          <Icon icon={value} size={22} title={value || '图'} />
+          <span className="truncate">{value || t('dialog.icon.clickToSelect')}</span>
+        </button>
+        <button
+          type="button"
+          className="btn"
+          title={t('dialog.icon.upload')}
+          disabled={uploading}
+          onClick={() => uploadInput.current?.click()}
+        >
+          <Icon icon={uploading ? 'mdi:loading' : 'mdi:upload-outline'} size={17} title={t('dialog.icon.upload')} />
+        </button>
+      </div>
+      <input ref={uploadInput} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+      {uploadError ? <p className="mt-1.5 text-[12px] text-red-500">{uploadError}</p> : null}
 
       {open ? (
         <div className="modal-backdrop" onClick={() => setOpen(false)}>

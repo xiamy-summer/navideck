@@ -46,8 +46,9 @@ interface Props {
  */
 export function Icon({ icon, size = 24, className, title }: Props) {
   const valid = !!icon && icon.includes(':');
-  // 图片地址（Sun-Panel 等第三方导入的自定义图标）不走 Iconify，直接按 <img> 渲染
-  const isImage = !!icon && /^(https?:\/\/|data:image\/)/i.test(icon);
+  // 图片地址不走 Iconify，直接按 <img> 渲染：
+  // 外链 http(s)、内嵌 data:image、以及本站上传的 /api/files/<hash>.<ext>
+  const isImage = !!icon && /^(https?:\/\/|data:image\/|\/api\/files\/)/i.test(icon);
   const [packReady, setPackReady] = useState(false);
   const [onlineFailed, setOnlineFailed] = useState(false);
 
