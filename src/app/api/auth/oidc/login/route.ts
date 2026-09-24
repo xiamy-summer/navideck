@@ -17,8 +17,9 @@ export async function GET(req: Request) {
   let authorizeUrl: string;
   try {
     authorizeUrl = await buildAuthorizeUrl(cfg, { state, nonce, codeChallenge: challenge });
-  } catch {
-    return fail('OIDC 配置错误，无法构造授权地址', 500);
+  } catch (e) {
+    // 把 discover() 抛出的具体原因透出，便于直接定位 issuer / 网络 / 证书问题
+    return fail(e instanceof Error ? e.message : 'OIDC 配置错误，无法构造授权地址', 500);
   }
 
   const res = NextResponse.redirect(authorizeUrl, 302);

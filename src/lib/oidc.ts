@@ -60,9 +60,27 @@ export function getOidcConfig(overrideRedirectUri?: string): OidcConfig | null {
 /** 获取 OIDC discovery 文档（带 1 小时缓存） */
 export async function discover(issuer: string): Promise<Record<string, unknown>> {
   if (cachedDiscovery && cachedDiscovery.ts > Date.now() - 3600_000) return cachedDiscovery.doc;
-  const res = await fetch(`${issuer}/.well-known/openid-configuration`, { headers: { Accept: 'application/json' } });
-  if (!res.ok) throw new Error('无法获取 OIDC 发现文档');
+  const url = `${issuer}/.well-known/openid-configuration`;
+
+  let res: Response;
+  try {
+    res = await fetch(url, { headers: { Accept: 'application/json' } });
+  } catch (e) {
+    // 常见于：issuer 填错 / 容器内 DNS 解析不了 / 自签证书不被信任
+    throw new Error(
+      `无法连接 OIDC 服务 ${url}（${e instanceof Error ? e.message : '网络错误'}）。请检查 Issuer 是否正确、以及本机能否访问该地址`,
+    );
+  }
+  if (!res.ok) {
+    throw new Error(`获取 OIDC 发现文档失败：${url} 返回 HTTP ${res.status}。请确认 Issuer 填写的是 realm / 应用根地址，而不是 discovery 地址本身`);
+  }
+
   const doc = (await res.json()) as Record<string, unknown>;
+  const missing = ['authorization_endpoint', 'token_endpoint', 'jwks_uri'].filter((k) => !doc[k]);
+  if (missing.length) {
+    throw new Error(`OIDC 发现文档缺少必需字段：${missing.join('、')}`);
+  }
+
   cachedDiscovery = { ts: Date.now(), doc };
   return doc;
 }
