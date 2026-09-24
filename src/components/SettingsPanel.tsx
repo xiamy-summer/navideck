@@ -151,7 +151,7 @@ export function SettingsPanel({ user, initialSettings, users: initialUsers }: Pr
         {tab === 'status' ? <StatusTab /> : null}
         {tab === 'docker' && isAdmin ? <DockerPanel toast={setToast} /> : null}
         {tab === 'metrics' ? <MetricsPanel /> : null}
-        {tab === 'oidc' && isAdmin ? <OidcTab settings={settings} onSave={save} /> : null}
+        {tab === 'oidc' && isAdmin ? <OidcTab settings={settings} onSave={save} isGlobal={isGlobal} /> : null}
         {tab === 'about' ? <AboutTab /> : null}
       </div>
 
@@ -1269,11 +1269,27 @@ function AboutTab() {
 /** 与 api/settings 的 SECRET_MASK 保持一致：收到它就代表密钥已保存 */
 const OIDC_SECRET_MASK = '__set__';
 
-function OidcTab({ settings, onSave }: { settings: Settings; onSave: (p: Partial<Settings>) => void }) {
+function OidcTab({
+  settings,
+  onSave,
+  isGlobal,
+}: {
+  settings: Settings;
+  onSave: (p: Partial<Settings>) => void;
+  isGlobal: boolean;
+}) {
   const { t } = useI18n();
   const [secret, setSecret] = useState('');
   const [callback, setCallback] = useState('/api/auth/oidc/callback');
   const secretSaved = settings.oidcClientSecret === OIDC_SECRET_MASK;
+
+  // 与 lib/oidc.ts 的 getOidcConfig() 判定保持一致，提前告诉用户为什么登录页没出现按钮
+  const missingBasics = !settings.oidcIssuer || !settings.oidcClientId;
+  const warning = !isGlobal
+    ? t('oidc.warnNotGlobal')
+    : settings.oidcEnabled && missingBasics
+      ? t('oidc.warnIncomplete')
+      : '';
 
   useEffect(() => {
     setCallback(`${window.location.origin}/api/auth/oidc/callback`);
@@ -1285,6 +1301,13 @@ function OidcTab({ settings, onSave }: { settings: Settings; onSave: (p: Partial
         <h3 className="text-[14px] font-medium">{t('oidc.title')}</h3>
         <p className="mt-1 text-[12px] text-muted">{t('oidc.hint')}</p>
       </div>
+
+      {warning ? (
+        <div className="flex items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-700 dark:text-amber-300">
+          <Icon icon="mdi:alert-outline" size={16} title={t('common.hint')} />
+          <span>{warning}</span>
+        </div>
+      ) : null}
 
       <div className="rounded-xl border border-line p-3 text-[12px] text-muted">
         <span>{t('oidc.callbackHint')}</span>

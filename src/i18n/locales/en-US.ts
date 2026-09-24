@@ -308,6 +308,8 @@ export const enUS: Record<string, string> = {
   'oidc.callbackHint': 'Redirect URI to register with your provider:',
   'oidc.enabled': 'Enable single sign-on',
   'oidc.enabledHint': 'Shows a single sign-on button on the login page',
+  'oidc.warnNotGlobal': 'You are editing personal settings, but SSO only reads global settings — switch the target to Global, otherwise the login page will not show the button.',
+  'oidc.warnIncomplete': 'Enabled, but Issuer or Client ID is still empty, so the login page will not show the SSO button.',
   'oidc.issuer': 'Issuer URL',
   'oidc.issuerHint': 'Provider URL that serves /.well-known/openid-configuration',
   'oidc.clientId': 'Client ID',

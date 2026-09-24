@@ -308,6 +308,8 @@ export const zhCN: Record<string, string> = {
   'oidc.callbackHint': '请在身份提供方填写的回调地址：',
   'oidc.enabled': '启用单点登录',
   'oidc.enabledHint': '启用后登录页会出现单点登录按钮',
+  'oidc.warnNotGlobal': '当前编辑的是「我的设置」，而单点登录只读取全局设置——请把右上角目标切换为「全局」再配置，否则登录页不会出现按钮。',
+  'oidc.warnIncomplete': '已启用，但 Issuer 或 Client ID 仍为空，配置不完整，登录页不会出现单点登录按钮。',
   'oidc.issuer': 'Issuer 地址',
   'oidc.issuerHint': '身份提供方地址，需能访问其 /.well-known/openid-configuration',
   'oidc.clientId': 'Client ID',
