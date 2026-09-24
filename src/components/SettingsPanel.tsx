@@ -9,6 +9,7 @@ import { MetricsPanel } from './MetricsPanel';
 import type { Role, SearchEngine, Settings, UploadedFile, User } from '@/lib/types';
 import { useI18n, LANGS, type Lang } from '@/i18n';
 import { APP_VERSION } from '@/lib/version';
+import { THEME_PRESETS } from '@/lib/theme';
 
 type Tab =
   | 'appearance'
@@ -80,6 +81,9 @@ export function SettingsPanel({ user, initialSettings, users: initialUsers }: Pr
     try {
       const saved = await api.saveSettings(patch, as ?? undefined, isGlobal);
       setSettings(saved);
+      // 外观设置即时同步 DOM（无需刷新）：预设/强调色 → html[data-preset] + --brand，背景 → body data-bg-mode / --bg-image
+      // 仅「自己的配置」生效；全局/代管场景改动的是其他配置源，页面下次加载才呈现
+      if (!isGlobal && as == null) applyAppearanceDom(saved);
     } catch (err) {
       setToast(err instanceof Error ? err.message : t('common.saveFailed'));
     }
@@ -157,7 +161,7 @@ export function SettingsPanel({ user, initialSettings, users: initialUsers }: Pr
 
         <div className="min-w-0 flex-1 space-y-4">
           {tab === 'appearance' ? (
-            <AppearanceTab settings={settings} onSave={save} setLang={setLang} />
+            <AppearanceTab settings={settings} onSave={save} setLang={setLang} as={as} />
           ) : null}
           {tab === 'search' ? <SearchTab settings={settings} onSave={save} /> : null}
           {tab === 'custom' ? <CustomTab settings={settings} onSave={save} /> : null}
@@ -203,6 +207,41 @@ export function SettingsPanel({ user, initialSettings, users: initialUsers }: Pr
 }
 
 /* ------------------------------ 通用小组件 ------------------------------ */
+
+/** 保存后把外观改动即时同步到 DOM（预设 id / --brand / body 背景），免刷新生效 */
+function applyAppearanceDom(s: Settings) {
+  const doc = document.documentElement;
+  if (s.themePreset) {
+    doc.dataset.preset = s.themePreset;
+    const p = THEME_PRESETS.find((x) => x.id === s.themePreset);
+    if (p) {
+      const accent = s.accent && s.accent !== p.accent ? s.accent : p.accent;
+      doc.style.setProperty('--brand', hexToRgbStr(accent));
+    }
+  }
+  if (s.accent) {
+    // 仅当没有明确预设时才直接按 accent 覆盖（避免 preset 切换的瞬间闪变）
+    const p = THEME_PRESETS.find((x) => x.id === (s.themePreset || doc.dataset.preset));
+    if (!p || s.accent !== p.accent) doc.style.setProperty('--brand', hexToRgbStr(s.accent));
+  }
+  document.body.dataset.bgMode = s.bgMode || 'cover';
+  if (s.bgImage) document.body.style.setProperty('--bg-image', `url("${s.bgImage}")`);
+  else document.body.style.removeProperty('--bg-image');
+}
+
+function hexToRgbStr(hex: string): string {
+  const value = hex.replace('#', '');
+  const full =
+    value.length === 3
+      ? value
+          .split('')
+          .map((c) => c + c)
+          .join('')
+      : value;
+  const num = Number.parseInt(full, 16);
+  if (Number.isNaN(num)) return '59 130 246';
+  return `${(num >> 16) & 255} ${(num >> 8) & 255} ${num & 255}`;
+}
 
 /** 设置分组卡片：品牌竖条标题（与首页分组一致），内部行用 divide 分隔 */
 function Section({
@@ -337,15 +376,31 @@ function AppearanceTab({
   settings,
   onSave,
   setLang,
+  as,
 }: {
   settings: Settings;
   onSave: (p: Partial<Settings>) => void;
   setLang: (lang: Lang) => void;
+  as?: number | null;
 }) {
   const { t } = useI18n();
+  const bgInput = useRef<HTMLInputElement>(null);
   const changeLang = (next: Lang) => {
     onSave({ lang: next });
     setLang(next);
+  };
+  const uploadBg = async (file: File) => {
+    try {
+      const rec = await api.uploadFile(file, as ?? undefined);
+      onSave({ bgImage: `/api/files/${rec.path}` });
+    } catch {
+      // 静默失败不打断输入；Toast 链路在父组件
+    }
+  };
+  const pickRandomPreset = () => {
+    const others = THEME_PRESETS.filter((p) => p.id !== settings.themePreset);
+    const picked = others[Math.floor(Math.random() * others.length)] ?? THEME_PRESETS[0];
+    onSave({ themePreset: picked.id, accent: picked.accent });
   };
   return (
     <div className="space-y-4">
@@ -373,6 +428,36 @@ function AppearanceTab({
             onChange={(v) => onSave({ theme: v })}
           />
         </Row>
+      </Section>
+
+      <Section title={t('settings.section.preset')}>
+        <Row label={t('appearance.themePreset')} hint={t('appearance.themePresetHint')}>
+          <div className="flex flex-wrap items-center gap-2">
+            {THEME_PRESETS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                title={p.label}
+                onClick={() => onSave({ themePreset: p.id, accent: p.accent })}
+                className="h-8 w-8 rounded-full border transition"
+                style={{
+                  background: `linear-gradient(135deg, ${p.accent}, ${p.accent}cc)`,
+                  borderColor: settings.themePreset === p.id ? 'rgb(var(--brand))' : 'rgb(var(--line))',
+                  boxShadow: settings.themePreset === p.id ? '0 0 0 2px rgb(var(--brand) / .35)' : undefined,
+                }}
+              />
+            ))}
+            <button
+              type="button"
+              className="btn"
+              onClick={pickRandomPreset}
+              title={t('appearance.presetRandom')}
+            >
+              <Icon icon="mdi:dice-multiple" size={15} title="" />
+              {t('appearance.presetRandom')}
+            </button>
+          </div>
+        </Row>
         <Row label={t('appearance.accent')}>
           <input
             type="color"
@@ -381,14 +466,6 @@ function AppearanceTab({
             className="h-8 w-14 cursor-pointer rounded border border-line bg-transparent"
           />
           <input className="field w-28" value={settings.accent} onChange={(e) => onSave({ accent: e.target.value })} />
-        </Row>
-        <Row label={t('appearance.bgImage')} hint={t('appearance.bgImageHint')}>
-          <input
-            className="field w-64"
-            placeholder="https://…/bg.jpg"
-            value={settings.bgImage}
-            onChange={(e) => onSave({ bgImage: e.target.value })}
-          />
         </Row>
       </Section>
 
@@ -415,6 +492,47 @@ function AppearanceTab({
             placeholder={t('appearance.footerPlaceholder')}
             value={settings.footerText}
             onChange={(e) => onSave({ footerText: e.target.value })}
+          />
+        </Row>
+      </Section>
+
+      <Section title={t('settings.section.bg')}>
+        <Row label={t('appearance.bgMode')}>
+          <MiniSegment
+            value={settings.bgMode}
+            options={[
+              { value: 'cover', label: t('appearance.bgModeCover') },
+              { value: 'blur', label: t('appearance.bgModeBlur') },
+            ]}
+            onChange={(v) => onSave({ bgMode: v })}
+          />
+        </Row>
+        <Row label={t('appearance.bgImage')} hint={t('appearance.bgImageHint')}>
+          <input
+            className="field w-64"
+            placeholder="https://…/bg.jpg"
+            value={settings.bgImage}
+            onChange={(e) => onSave({ bgImage: e.target.value })}
+          />
+          <button className="btn" onClick={() => bgInput.current?.click()}>
+            <Icon icon="mdi:upload" size={15} title="" />
+            {t('appearance.uploadBg')}
+          </button>
+          {settings.bgImage ? (
+            <button className="btn btn-ghost" onClick={() => onSave({ bgImage: '' })}>
+              {t('appearance.clear')}
+            </button>
+          ) : null}
+          <input
+            ref={bgInput}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void uploadBg(f);
+              e.target.value = '';
+            }}
           />
         </Row>
       </Section>

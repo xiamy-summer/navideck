@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { getGlobalSettings, getUserByName, getUserSettings } from '@/lib/db';
 import { ensureBootstrap } from '@/lib/bootstrap';
 import { PwaRegister } from '@/components/PwaRegister';
+import { getPreset, hexToRgb, presetCss } from '@/lib/theme';
 
 export const metadata: Metadata = {
   title: 'NaviDeck',
@@ -31,8 +32,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const settings = getUserSettings(me?.id ?? guest?.id ?? 0);
   const globalSettings = getGlobalSettings();
 
+  // 主题预设：preset 自带 accent + 亮暗 canvas；手动改过 accent（与所选预设不同）则覆盖
+  const preset = getPreset(settings.themePreset);
+  const customAccent = settings.accent && settings.accent !== preset.accent ? settings.accent : '';
   const styleVars: Record<string, string> = {
-    '--brand': hexToRgb(settings.accent || '#3b82f6'),
+    '--brand': hexToRgb(customAccent || preset.accent),
     '--card-radius': `${settings.cardRadius}px`,
     '--card-opacity': String((settings.cardOpacity ?? 100) / 100),
     '--card-min': `${Math.max(96, Math.round(1080 / Math.max(2, settings.columns)))}px`,
@@ -40,10 +44,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   if (settings.bgImage) styleVars['--bg-image'] = `url("${settings.bgImage}")`;
 
   return (
-    <html lang={settings.lang || 'zh-CN'} suppressHydrationWarning>
+    <html lang={settings.lang || 'zh-CN'} suppressHydrationWarning data-preset={preset.id}>
       <head>
         {/* iOS 添加到主屏后以独立窗口打开（Next 默认只输出 mobile-web-app-capable） */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
+        {/* 主题预设：html[data-preset] 切换 --brand / --canvas（亮暗各一套） */}
+        <style dangerouslySetInnerHTML={{ __html: presetCss() }} />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var t=${JSON.stringify(settings.theme)};var o=localStorage.getItem('nas-nav-theme');if(o)t=o;var d=t==='dark'||(t==='auto'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);}catch(e){}})()`,
@@ -51,16 +57,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
         {settings.customCss ? <style dangerouslySetInnerHTML={{ __html: settings.customCss }} /> : null}
       </head>
-      <body
-        style={
-          {
-            ...styleVars,
-            backgroundImage: settings.bgImage ? `url("${settings.bgImage}")` : undefined,
-            backgroundSize: settings.bgImage ? 'cover' : undefined,
-            backgroundAttachment: settings.bgImage ? 'fixed' : undefined,
-          } as React.CSSProperties
-        }
-      >
+      <body style={styleVars as React.CSSProperties} data-bg-mode={settings.bgMode} data-has-bg={settings.bgImage ? '1' : undefined}>
         {children}
         <PwaRegister />
         {globalSettings.customJs && !settings.customJs ? null : null}
@@ -70,18 +67,4 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </body>
     </html>
   );
-}
-
-function hexToRgb(hex: string): string {
-  const value = hex.replace('#', '');
-  const full =
-    value.length === 3
-      ? value
-          .split('')
-          .map((c) => c + c)
-          .join('')
-      : value;
-  const num = Number.parseInt(full, 16);
-  if (Number.isNaN(num)) return '59 130 246';
-  return `${(num >> 16) & 255} ${(num >> 8) & 255} ${num & 255}`;
 }

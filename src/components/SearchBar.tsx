@@ -42,7 +42,7 @@ export function SearchBar({ settings, items, onOpenItem }: Props) {
     width: '100%',
     maxWidth: settings.searchWidth || 520,
     borderRadius: settings.searchRadius ?? 999,
-    background: settings.searchBg || 'rgb(var(--surface) / .92)',
+    background: settings.searchBg || 'rgb(var(--surface) / .72)',
     color: settings.searchText || undefined,
   };
 

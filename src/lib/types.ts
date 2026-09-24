@@ -81,8 +81,12 @@ export interface Settings {
   siteTitle: string;
   lang: string;
   theme: ThemeMode;
+  /** 主题预设 id（theme.ts），应用时覆盖 accent + canvas 亮暗背景 */
+  themePreset: string;
   accent: string;
   bgImage: string;
+  /** 背景图应用方式：cover（铺满）/ blur（模糊淡入） */
+  bgMode: 'cover' | 'blur';
   netMode: NetMode;
 
   columns: number;
@@ -161,7 +165,9 @@ export const DEFAULT_SETTINGS: Settings = {
   lang: 'zh-CN',
   theme: 'auto',
   accent: '#3b82f6',
+  themePreset: 'blue',
   bgImage: '',
+  bgMode: 'cover',
   netMode: 'lan',
 
   columns: 6,
