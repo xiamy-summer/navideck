@@ -39,6 +39,50 @@ function relTime(ms: number, t: (k: string, p?: Record<string, string | number>)
   return t('common.daysAgo', { n: day });
 }
 
+/** 用量配色：≥90 危险、≥75 警告、其余正常 */
+function toneOf(pct: number): 'ok' | 'warn' | 'err' {
+  if (pct >= 90) return 'err';
+  if (pct >= 75) return 'warn';
+  return 'ok';
+}
+const TONE_COLOR: Record<'ok' | 'warn' | 'err', string> = {
+  ok: '#10b981',
+  warn: '#f59e0b',
+  err: '#ef4444',
+};
+
+/** 小组件统一头部：图标色块 + 标题 + 右侧副信息 */
+function WidgetHead({ icon, title, children }: { icon: string; title: string; children?: React.ReactNode }) {
+  return (
+    <div className="widget-head">
+      <span className="widget-head-icon">
+        <Icon icon={icon} size={15} title={title} />
+      </span>
+      <span className="widget-title">{title}</span>
+      {children}
+    </div>
+  );
+}
+
+/** 统一空态 / 加载态：图标块 + 说明文案 */
+function WidgetEmpty({ icon, title, text, spin }: { icon: string; title?: string; text: string; spin?: boolean }) {
+  return (
+    <div className="widget-empty">
+      <span className="widget-empty-icon">
+        <Icon icon={icon} size={20} title={title || text} className={spin ? 'animate-spin' : undefined} />
+      </span>
+      {title ? <p className="text-[12.5px] font-medium">{title}</p> : null}
+      <p className="widget-empty-text max-w-[210px]">{text}</p>
+    </div>
+  );
+}
+
+/** 加载态（与其他空态保持同一视觉语言） */
+function WidgetLoading() {
+  const { t } = useI18n();
+  return <WidgetEmpty icon="mdi:refresh" text={t('common.loading')} spin />;
+}
+
 /* ----------------------------- 系统卡片 ----------------------------- */
 function SystemCard({ refreshSec }: { refreshSec: number }) {
   const { t } = useI18n();
@@ -78,32 +122,71 @@ function SystemCard({ refreshSec }: { refreshSec: number }) {
 
   const cpuHistory = metrics?.history.map((p) => p.cpu) ?? [];
   const memHistory = metrics?.history.map((p) => p.mem) ?? [];
+  const cpu = metrics?.current.cpu ?? 0;
+  const mem = metrics?.current.mem ?? 0;
+  const diskPct = Math.min(100, metrics?.disk.usedPercent ?? 0);
+  const memColor = TONE_COLOR[toneOf(mem)];
+  const diskTone = toneOf(diskPct);
+  const cpuTone = toneOf(cpu);
+  const diskHard = metrics ? `${metrics.disk.usedGb} / ${metrics.disk.totalGb} GB` : '—';
+
   return (
-    <div className="card p-4">
-      <div className="mb-2 flex items-center gap-1.5">
-        <Icon icon="mdi:chip" size={17} title={t('widget.system')} />
-        <span className="text-[13px] font-medium">{t('widget.system')}</span>
+    <div className="card widget p-4">
+      <WidgetHead icon="mdi:memory" title={t('widget.system')}>
         {unack > 0 ? (
-          <span className="chip inline-flex items-center gap-1 text-red-500">
+          <span className="chip ml-1 inline-flex items-center gap-1 !border-red-500/40 !py-0.5 !text-red-500">
             <Icon icon="mdi:alert-outline" size={12} title={t('metrics.alerts')} />
             {unack}
           </span>
         ) : null}
-        <span className="ml-auto text-[11px] text-muted">
-          {metrics ? t('widget.load', { n: metrics.cpu.loadAvg[0] }) : t('common.loading')}
+        <span className="widget-sub">{metrics ? t('widget.load', { n: metrics.cpu.loadAvg[0] }) : t('common.loading')}</span>
+      </WidgetHead>
+
+      <div className="widget-metric">
+        <span className="widget-metric-label">{t('widget.cpu')}</span>
+        <Sparkline bare data={cpuHistory} color={cpuTone === 'ok' ? 'rgb(var(--brand))' : TONE_COLOR[cpuTone]} />
+        <span className="widget-metric-val">
+          {cpu.toFixed(1)}
+          <span className="widget-metric-unit">%</span>
         </span>
       </div>
-      <Sparkline data={cpuHistory} label={t('metrics.cpu')} value={metrics?.current.cpu} />
-      <div className="mt-1">
-        <Sparkline data={memHistory} label={t('metrics.memory')} value={metrics?.current.mem} color="#10b981" />
+      <div className="widget-metric">
+        <span className="widget-metric-label">{t('widget.memory')}</span>
+        <Sparkline bare data={memHistory} color={memColor} />
+        <span className="widget-metric-val" style={{ color: memColor }}>
+          {mem.toFixed(1)}
+          <span className="widget-metric-unit">%</span>
+        </span>
       </div>
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted">
-        <span>{t('widget.disk', { n: metrics?.disk.usedPercent ?? 0 })}</span>
-        <span>{metrics ? `${metrics.disk.usedGb} / ${metrics.disk.totalGb} GB` : ''}</span>
-        <span>↓ {fmtRate(metrics?.current.netRx ?? 0)}</span>
-        <span>↑ {fmtRate(metrics?.current.netTx ?? 0)}</span>
-        <span>
-          {t('widget.uptime')} {metrics ? fmtUptime(metrics.osUptime, t) : ''}
+
+      <div className="mt-3.5">
+        <div className="mb-1.5 flex items-baseline justify-between">
+          <span className="widget-foot-item text-[11px] text-muted">
+            <Icon icon="mdi:harddisk" size={12} title={t('widget.diskLabel')} />
+            {t('widget.diskLabel')}
+          </span>
+          <span className="text-[11px] text-muted">
+            {diskHard}
+            <b className="ml-1.5 font-semibold text-ink">{diskPct}%</b>
+          </span>
+        </div>
+        <div className="widget-bar" data-tone={diskTone}>
+          <i style={{ width: `${diskPct}%` }} />
+        </div>
+      </div>
+
+      <div className="widget-foot">
+        <span className="widget-foot-item text-emerald-600 dark:text-emerald-400">
+          <Icon icon="mdi:download" size={12} title="↓" />
+          {fmtRate(metrics?.current.netRx ?? 0)}
+        </span>
+        <span className="widget-foot-item text-sky-600 dark:text-sky-400">
+          <Icon icon="mdi:upload" size={12} title="↑" />
+          {fmtRate(metrics?.current.netTx ?? 0)}
+        </span>
+        <span className="widget-foot-item">
+          <Icon icon="mdi:clock-outline" size={12} title={t('widget.uptime')} />
+          {metrics ? fmtUptime(metrics.osUptime, t) : ''}
         </span>
       </div>
     </div>
@@ -128,42 +211,68 @@ function DockerCard({ refreshSec }: { refreshSec: number }) {
   }, [load, refreshSec]);
 
   // 首页只需要知道「有没有异常」，不铺进程清单：
-  // 全部运行时只留一行状态；只有未运行的容器才值得列出来（最多 4 个）
-  const runningCount = docker?.available ? docker.containers.filter((c) => c.state === 'running').length : 0;
-  const stoppedContainers = docker?.available ? docker.containers.filter((c) => c.state !== 'running') : [];
+  // 汇总数字 + 运行比例条，只有未运行的容器才列出名称（最多 3 个）
+  const total = docker?.containers.length ?? 0;
+  const running = docker?.available ? docker.containers.filter((c) => c.state === 'running').length : 0;
+  const stopped = docker?.available ? docker.containers.filter((c) => c.state !== 'running') : [];
+  const ratio = total ? (running / total) * 100 : 0;
+  const tone = stopped.length ? 'warn' : 'ok';
 
   return (
-    <div className="card p-4">
-      <div className="mb-2 flex items-center gap-1.5">
-        <Icon icon="mdi:docker" size={17} title="Docker" />
-        <span className="text-[13px] font-medium">{t('widget.containers')}</span>
+    <div className="card widget p-4">
+      <WidgetHead icon="simple-icons:docker" title={t('widget.containers')}>
         {docker?.available ? (
-          <span className="ml-auto text-[11px] text-muted">
-            {t('widget.running', { r: docker.containers.filter((c) => c.state === 'running').length, t: docker.containers.length })}
+          <span className="widget-sub">
+            {running} / {total}
           </span>
         ) : (
-          <span className="ml-auto text-[11px] text-muted">{t('widget.notConnected')}</span>
+          <span className="widget-sub">{t('widget.notConnected')}</span>
         )}
-      </div>
+      </WidgetHead>
+
       {!docker ? (
-        <p className="py-4 text-[12px] text-muted">{t('common.loading')}</p>
+        <WidgetLoading />
       ) : !docker.available ? (
-        <p className="py-2 text-[12px] text-muted">{t('widget.dockerNoSocket', { socket: docker.socket })}</p>
-      ) : docker.containers.length === 0 ? (
-        <p className="py-4 text-[12px] text-muted">{t('widget.noContainers')}</p>
-      ) : stoppedContainers.length === 0 ? (
-        <div className="flex items-center gap-2 py-1 text-[12px]">
-          <span className="dot-run dot-pulse h-2 w-2 flex-none rounded-full" />
-          <span className="text-muted">{t('widget.allRunning', { n: runningCount })}</span>
-        </div>
+        <WidgetEmpty icon="simple-icons:docker" title={t('widget.notConnected')} text={t('widget.dockerNoSocket', { socket: docker.socket })} />
+      ) : total === 0 ? (
+        <WidgetEmpty icon="simple-icons:docker" text={t('widget.noContainers')} />
       ) : (
-        <div className="flex items-center gap-2 py-1 text-[12px]">
-          <span className="dot-run h-2 w-2 flex-none rounded-full" />
-          <span className="text-muted">{t('widget.runningCount', { n: runningCount })}</span>
-          <span className="ml-auto flex-none text-[11px] text-amber-600 dark:text-amber-400">
-            {t('widget.stoppedCount', { n: stoppedContainers.length })}
-          </span>
-        </div>
+        <>
+          <div className="flex items-end justify-between">
+            <span className="widget-stat">
+              <span className="widget-stat-num" style={{ color: stopped.length ? TONE_COLOR.warn : TONE_COLOR.ok }}>
+                {running}
+              </span>
+              <span className="widget-stat-unit">
+                / {total} {t('widget.runningLabel')}
+              </span>
+            </span>
+            <span className={`${stopped.length ? 'dot-warn' : 'dot-run'} dot-pulse h-2 w-2 rounded-full`} />
+          </div>
+          <div className="widget-bar mt-2.5" data-tone={tone}>
+            <i style={{ width: `${ratio}%` }} />
+          </div>
+          {stopped.length ? (
+            <div className="widget-foot">
+              {stopped.slice(0, 3).map((c) => (
+                <span key={c.id} className="widget-foot-item text-amber-600 dark:text-amber-400">
+                  <span className="dot-warn h-1.5 w-1.5 rounded-full" />
+                  <span className="max-w-[110px] truncate" title={c.name}>
+                    {c.name}
+                  </span>
+                </span>
+              ))}
+              {stopped.length > 3 ? <span className="widget-foot-item">{t('widget.moreContainers', { n: stopped.length - 3 })}</span> : null}
+            </div>
+          ) : (
+            <div className="widget-foot">
+              <span className="widget-foot-item">
+                <Icon icon="mdi:check-circle-outline" size={12} title={t('widget.allRunning', { n: running })} />
+                {t('widget.allRunning', { n: running })}
+              </span>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -179,16 +288,17 @@ function ClockCard() {
     return () => clearInterval(timer);
   }, []);
   const weekdays = t('common.weekdays').split(',');
+  const hh = now ? now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--';
+  const ss = now ? now.toLocaleTimeString([], { second: '2-digit' }).replace(/\D/g, '').padStart(2, '0') : '--';
   return (
-    <div className="card flex flex-col items-center justify-center p-4">
-      <Icon icon="mdi:clock-outline" size={18} title={t('widget.clock')} className="mb-1 opacity-70" />
-      <div className="text-[26px] font-semibold tabular-nums leading-none">
-        {now ? now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--:--'}
+    <div className="card widget items-center justify-center p-4 text-center">
+      <div className="widget-clock-time">
+        {hh}
+        <small>:{ss}</small>
       </div>
-      <div className="mt-1 text-[12px] text-muted">
-        {now
-          ? `${now.toLocaleDateString()} · ${weekdays[now.getDay()] ?? ''}`
-          : ''}
+      <div className="widget-clock-date">
+        <Icon icon="mdi:calendar" size={11} title={t('widget.clock')} />
+        {now ? `${now.toLocaleDateString()} · ${weekdays[now.getDay()] ?? ''}` : ''}
       </div>
     </div>
   );
@@ -234,41 +344,35 @@ function WeatherCard({ city, refreshSec }: { city: string; refreshSec: number })
     const timer = setInterval(() => void load(), Math.max(30, refreshSec) * 1000);
     return () => clearInterval(timer);
   }, [load, refreshSec]);
-  if (!city.trim()) {
+
+  if (!data) {
     return (
-      <div className="card flex flex-col items-center justify-center p-4">
-        <Icon icon="mdi:weather-cloudy" size={22} title={t('widget.weather')} className="mb-1 opacity-70" />
-        <p className="text-[12px] text-muted">{t('widget.weatherNoCity')}</p>
+      <div className="card widget p-4">
+        <WidgetHead icon="mdi:thermometer" title={t('widget.weather')} />
+        {err ? <WidgetEmpty icon="mdi:cloud-outline" text={err} /> : <WidgetLoading />}
       </div>
     );
   }
-  if (err && !data) {
-    return (
-      <div className="card flex flex-col items-center justify-center p-4">
-        <Icon icon="mdi:weather-cloudy-alert" size={22} title={t('widget.weather')} className="mb-1 opacity-70" />
-        <p className="text-[12px] text-muted">{err}</p>
-      </div>
-    );
-  }
+
   return (
-    <div className="card flex items-center gap-3 p-4">
-      {data ? (
-        <>
-          <Icon icon={data.icon} size={40} title={t('widget.weather')} />
-          <div className="min-w-0">
-            <div className="flex items-baseline gap-2">
-              <span className="text-[24px] font-semibold leading-none">{data.tempC}°</span>
-              <span className="text-[12px] text-muted">{t(`widget.weather.${data.category}`)}</span>
-            </div>
-            <div className="mt-1 truncate text-[11px] text-muted">{data.location}</div>
-            <div className="mt-0.5 text-[11px] text-muted">
-              {t('widget.feels')} {data.feelsC}° · {t('widget.humidity')} {data.humidity}% · {data.windKmh} km/h
-            </div>
+    <div className="card widget p-4">
+      <WidgetHead icon="mdi:thermometer" title={t('widget.weather')}>
+        <span className="widget-sub truncate">{data.location}</span>
+      </WidgetHead>
+      <div className="flex flex-1 items-center gap-3">
+        <Icon icon={data.icon} size={46} title={t('widget.weather')} />
+        <div className="min-w-0">
+          <div className="flex items-baseline gap-2">
+            <span className="text-[28px] font-semibold leading-none tracking-tight">{data.tempC}°</span>
+            <span className="text-[12px] text-muted">{t(`widget.weather.${data.category}`)}</span>
           </div>
-        </>
-      ) : (
-        <p className="text-[12px] text-muted">{t('common.loading')}</p>
-      )}
+          <div className="widget-foot !mt-2 !border-0 !pt-0">
+            <span>{t('widget.feels')} {data.feelsC}°</span>
+            <span>{t('widget.humidity')} {data.humidity}%</span>
+            <span>{data.windKmh} km/h</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -313,35 +417,40 @@ function RssCard({ feeds, max, refreshSec }: { feeds: string[]; max: number; ref
     const timer = setInterval(() => void load(), Math.max(60, refreshSec * 6) * 1000);
     return () => clearInterval(timer);
   }, [load, refreshSec]);
-  if (!feeds.length) {
-    return (
-      <div className="card flex flex-col items-center justify-center p-4">
-        <Icon icon="mdi:rss" size={22} title={t('widget.rss')} className="mb-1 opacity-70" />
-        <p className="text-[12px] text-muted">{t('widget.rssNoFeed')}</p>
-      </div>
-    );
-  }
+
   return (
-    <div className="card p-4">
-      <div className="mb-2 flex items-center gap-1.5">
-        <Icon icon="mdi:rss" size={17} title={t('widget.rss')} />
-        <span className="text-[13px] font-medium">{t('widget.rss')}</span>
-      </div>
-      {err && !items.length ? (
-        <p className="py-2 text-[12px] text-muted">{err}</p>
+    <div className="card widget p-4">
+      <WidgetHead icon="simple-icons:rss" title={t('widget.rss')}>
+        {items.length ? <span className="widget-sub">{items.length}</span> : null}
+      </WidgetHead>
+      {!feeds.length ? (
+        <WidgetEmpty icon="simple-icons:rss" text={t('widget.rssNoFeed')} />
+      ) : err && !items.length ? (
+        <WidgetEmpty icon="mdi:cloud-outline" text={err} />
       ) : items.length === 0 ? (
-        <p className="py-2 text-[12px] text-muted">{t('common.loading')}</p>
+        <WidgetLoading />
       ) : (
-        <ul className="space-y-1.5">
+        <ul className="-my-1">
           {items.map((it, i) => (
-            <li key={`${it.link}-${i}`} className="text-[12px]">
-              <a href={it.link} target="_blank" rel="noopener noreferrer" className="block truncate hover:text-brand" title={it.title}>
-                {it.title}
+            <li key={`${it.link}-${i}`}>
+              <a
+                href={it.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group/rss flex items-start gap-2 py-1.5"
+                title={it.title}
+              >
+                <span className="mt-[6px] h-1.5 w-1.5 flex-none rounded-full bg-brand/35 transition-colors group-hover/rss:bg-brand" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[12px] leading-snug transition-colors group-hover/rss:text-brand">
+                    {it.title}
+                  </span>
+                  <span className="mt-0.5 flex gap-2 text-[10px] text-muted">
+                    <span className="truncate">{it.source}</span>
+                    <span className="ml-auto flex-none">{relTime(it.date, t)}</span>
+                  </span>
+                </span>
               </a>
-              <div className="flex gap-2 text-[10px] text-muted">
-                <span className="truncate">{it.source}</span>
-                <span className="ml-auto flex-none">{relTime(it.date, t)}</span>
-              </div>
             </li>
           ))}
         </ul>
@@ -353,21 +462,14 @@ function RssCard({ feeds, max, refreshSec }: { feeds: string[]; max: number; ref
 /* ----------------------------- 便签卡片 ----------------------------- */
 function NotesCard({ text }: { text: string }) {
   const { t } = useI18n();
-  if (!text.trim()) {
-    return (
-      <div className="card flex flex-col items-center justify-center p-4">
-        <Icon icon="mdi:note-text-outline" size={22} title={t('widget.notes')} className="mb-1 opacity-70" />
-        <p className="text-[12px] text-muted">{t('widget.notesEmpty')}</p>
-      </div>
-    );
-  }
   return (
-    <div className="card p-4">
-      <div className="mb-2 flex items-center gap-1.5">
-        <Icon icon="mdi:note-text-outline" size={17} title={t('widget.notes')} />
-        <span className="text-[13px] font-medium">{t('widget.notes')}</span>
-      </div>
-      <div className="md-body text-[12px] leading-relaxed text-ink/90" dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }} />
+    <div className="card widget p-4">
+      <WidgetHead icon="mdi:file-document-outline" title={t('widget.notes')} />
+      {!text.trim() ? (
+        <WidgetEmpty icon="mdi:file-document-outline" text={t('widget.notesEmpty')} />
+      ) : (
+        <div className="md-body text-[12px] leading-relaxed text-ink/90" dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }} />
+      )}
     </div>
   );
 }

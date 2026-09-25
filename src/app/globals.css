@@ -523,3 +523,219 @@ body[data-has-bg].dark .settings-section {
   font-size: 11px;
   color: rgb(var(--muted));
 }
+
+/* ================= 首页小组件（widgets） ================= */
+.widget {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.widget:hover {
+  border-color: rgb(var(--brand) / 0.4);
+  box-shadow: 0 12px 30px -20px rgb(var(--brand) / 0.9), 0 1px 2px rgb(15 23 42 / 0.05);
+}
+.dark .widget:hover {
+  box-shadow: 0 14px 32px -18px rgb(0 0 0 / 0.85);
+}
+/* 右上角品牌色柔光，缓解大面积留白带来的单调感 */
+.widget::after {
+  content: '';
+  position: absolute;
+  top: -52px;
+  right: -52px;
+  width: 138px;
+  height: 138px;
+  z-index: 0;
+  border-radius: 999px;
+  background: radial-gradient(circle at center, rgb(var(--brand) / 0.18), rgb(var(--brand) / 0) 68%);
+  pointer-events: none;
+}
+.widget > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* 卡片头部：图标 chip + 标题 + 右侧副信息 */
+.widget-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.widget-head-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 9px;
+  background: rgb(var(--brand) / 0.12);
+  color: rgb(var(--brand));
+}
+.dark .widget-head-icon {
+  background: rgb(var(--brand) / 0.2);
+}
+.widget-title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.widget-sub {
+  margin-left: auto;
+  flex: none;
+  font-size: 11px;
+  color: rgb(var(--muted));
+}
+
+/* 空态 / 加载态：统一的图标块 + 提示文案 */
+.widget-empty {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 70px;
+  padding: 4px 0;
+  text-align: center;
+}
+.widget-empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  background: rgb(var(--brand) / 0.1);
+  color: rgb(var(--brand));
+  opacity: 0.85;
+}
+.dark .widget-empty-icon {
+  background: rgb(var(--brand) / 0.16);
+}
+.widget-empty-text {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: rgb(var(--muted));
+}
+
+/* 折线指标行：标签 + 曲线 + 数值 */
+.widget-metric {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.widget-metric + .widget-metric {
+  margin-top: 5px;
+}
+.widget-metric-label {
+  width: 30px;
+  flex: none;
+  font-size: 11px;
+  color: rgb(var(--muted));
+}
+.widget-metric-val {
+  width: 54px;
+  flex: none;
+  text-align: right;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.widget-metric-unit {
+  margin-left: 1px;
+  font-size: 10px;
+  font-weight: 400;
+  color: rgb(var(--muted));
+}
+
+/* 底部信息带：虚线分隔 + 图标化小项 */
+.widget-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 14px;
+  margin-top: auto;
+  padding-top: 10px;
+  font-size: 11px;
+  color: rgb(var(--muted));
+}
+.widget-foot-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 迷你进度条 */
+.widget-bar {
+  height: 5px;
+  border-radius: 999px;
+  background: rgb(var(--line) / 0.8);
+  overflow: hidden;
+}
+.widget-bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgb(var(--brand) / 0.7), rgb(var(--brand)));
+  transition: width 0.45s ease;
+}
+.widget-bar[data-tone='ok'] > i {
+  background: linear-gradient(90deg, #34d399, #10b981);
+}
+.widget-bar[data-tone='warn'] > i {
+  background: linear-gradient(90deg, #fbbf24, #f59e0b);
+}
+.widget-bar[data-tone='err'] > i {
+  background: linear-gradient(90deg, #f87171, #ef4444);
+}
+
+/* 大数字焦点（容器数量等） */
+.widget-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+.widget-stat-num {
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.widget-stat-unit {
+  font-size: 11px;
+  color: rgb(var(--muted));
+}
+
+/* 时钟卡片 */
+.widget-clock-time {
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.widget-clock-time small {
+  margin-left: 2px;
+  font-size: 15px;
+  font-weight: 500;
+  opacity: 0.5;
+}
+.widget-clock-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 3px 11px;
+  border-radius: 999px;
+  background: rgb(var(--brand) / 0.1);
+  color: rgb(var(--brand));
+  font-size: 11px;
+}
+.dark .widget-clock-date {
+  background: rgb(var(--brand) / 0.18);
+}
