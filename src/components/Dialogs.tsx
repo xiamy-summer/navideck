@@ -8,6 +8,25 @@ import type { ProbeResult, ServiceTemplate } from '@/lib/serviceWidgets';
 import { api, type DockerContainer } from '@/lib/api-client';
 import { useI18n } from '@/i18n';
 
+/**
+ * 内置服务模板清单：模块级缓存，多个对话框共用一次请求。
+ * 模板是静态内置数据，且「接入服务数据」按钮依赖它决定默认类型，
+ * 若每次打开弹窗才现拉，手快时会在模板到位前点到按钮，类型被误落成「自定义 API」。
+ */
+let templatesPromise: Promise<ServiceTemplate[]> | null = null;
+export function loadServiceTemplates(): Promise<ServiceTemplate[]> {
+  if (!templatesPromise) {
+    templatesPromise = api
+      .serviceTemplates()
+      .then((r) => r.templates ?? [])
+      .catch((err) => {
+        templatesPromise = null; // 失败允许下次重试
+        throw err;
+      });
+  }
+  return templatesPromise;
+}
+
 export interface ItemDraft {
   id?: number;
   groupId: number;
@@ -81,6 +100,8 @@ export function ItemDialog({ draft, groups, onClose, onSave, onDelete }: ItemDia
     setForm((prev) => ({ ...prev, [key]: value }));
 
   const [templates, setTemplates] = useState<ServiceTemplate[]>([]);
+  /** 模板清单是否已就绪：未就绪时不允许「接入服务数据」，避免默认类型误落为自定义 */
+  const [templatesReady, setTemplatesReady] = useState(false);
   const [svc, setSvc] = useState<ItemService | null>(() => parseService(draft.service));
   /** 服务地址来源：内网 / 外网 / 自定义；默认按已存 url 与站点地址的关系推断 */
   const [urlSrc, setUrlSrc] = useState<'lan' | 'wan' | 'custom'>(() => {
@@ -98,13 +119,15 @@ export function ItemDialog({ draft, groups, onClose, onSave, onDelete }: ItemDia
 
   useEffect(() => {
     let alive = true;
-    api
-      .serviceTemplates()
-      .then((r) => {
-        if (alive) setTemplates(r.templates);
+    loadServiceTemplates()
+      .then((list) => {
+        if (!alive) return;
+        setTemplates(list);
+        setTemplatesReady(true);
       })
       .catch(() => {
-        /* 模板加载失败则只保留自定义模式 */
+        // 失败也置为就绪，避免「接入服务数据」按钮永久停在加载态（退化为自定义 API）
+        if (alive) setTemplatesReady(true);
       });
     return () => {
       alive = false;
@@ -259,6 +282,7 @@ export function ItemDialog({ draft, groups, onClose, onSave, onDelete }: ItemDia
             {!svc ? (
               <button
                 className="btn"
+                disabled={!templatesReady}
                 onClick={() => {
                   // 新增时优先用内网地址（站点地址与 JSON 同步，保证服务地址跟随站点变化）
                   const src: 'lan' | 'wan' | 'custom' = form.urlLan ? 'lan' : form.urlWan ? 'wan' : 'custom';
@@ -267,7 +291,7 @@ export function ItemDialog({ draft, groups, onClose, onSave, onDelete }: ItemDia
                 }}
               >
                 <Icon icon="mdi:chart-box-outline" size={16} title={t('service.add')} />
-                {t('service.add')}
+                {templatesReady ? t('service.add') : t('common.loading')}
               </button>
             ) : (
               <div className="space-y-2">

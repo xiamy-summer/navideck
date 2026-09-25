@@ -9,7 +9,7 @@ import { SearchBar } from './SearchBar';
 import { WebModal } from './WebModal';
 import { CommandPalette } from './CommandPalette';
 import { Widgets } from './Widgets';
-import { ConfirmDialog, emptyItemDraft, GroupDialog, ItemDialog, itemToDraft, type ItemDraft } from './Dialogs';
+import { ConfirmDialog, emptyItemDraft, GroupDialog, ItemDialog, itemToDraft, loadServiceTemplates, type ItemDraft } from './Dialogs';
 import type { Group, Item, NetMode, Settings, ThemeMode, User } from '@/lib/types';
 import type { ProbeResult } from '@/lib/serviceWidgets';
 import { useI18n } from '@/i18n';
@@ -122,6 +122,11 @@ export function HomeView({
   }, [user]);
 
   const allItems = useMemo(() => groups.flatMap((g) => g.items), [groups]);
+
+  // 预热服务模板清单：打开站点弹窗时模板已就绪，避免请求未回来就点「接入服务数据」导致类型误落自定义
+  useEffect(() => {
+    void loadServiceTemplates().catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     if (!toast) return;
