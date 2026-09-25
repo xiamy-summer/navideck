@@ -405,7 +405,7 @@ function SortableItem({ item, ...props }: Props & { item: Item; activeId: string
       }}
       {...(editMode ? attributes : {})}
       {...(editMode ? listeners : {})}
-      className={`link-card card relative flex min-h-[92px] flex-col items-center justify-center gap-1.5 p-3 text-center ${
+      className={`link-card card group relative flex min-h-[92px] flex-col items-center justify-center gap-1.5 p-3 text-center ${
         item.cardSize === 'sm' ? 'min-h-[76px] gap-1' : ''
       } ${item.cardSize === 'lg' ? 'flex-row gap-3 text-left' : ''} ${
         editMode ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
@@ -419,6 +419,15 @@ function SortableItem({ item, ...props }: Props & { item: Item; activeId: string
       <div className={`icon-tile ${item.cardSize === 'sm' ? '!p-1.5' : ''}`}>
         <Icon icon={item.icon} size={item.cardSize === 'sm' ? Math.round((settings.iconSize || 34) * 0.75) : settings.iconSize || 34} title={item.title} />
       </div>
+
+      {dot ? (
+        <span
+          className="pointer-events-none absolute left-2 top-2 z-10 rounded-md border border-line bg-surface/95 px-1.5 py-0.5 text-[10px] leading-none text-muted opacity-0 shadow-sm transition-opacity duration-150 group-hover:opacity-100"
+          title={dot.title}
+        >
+          {dot.title}
+        </span>
+      ) : null}
 
       <span
         className={`flex w-full items-center justify-center gap-1.5 text-[13px] font-medium ${
