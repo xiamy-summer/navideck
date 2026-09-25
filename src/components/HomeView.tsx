@@ -284,6 +284,22 @@ export function HomeView({
     [targetId, t],
   );
 
+  /** 单个小组件尺寸：写入 widgetSizes 覆盖表，只影响这一张卡 */
+  const saveWidgetSize = useCallback(
+    async (key: string, size: 'sm' | 'md' | 'lg') => {
+      const next = { ...(settings.widgetSizes ?? {}), [key]: size };
+      // 乐观更新，避免卡片尺寸闪烁
+      setSettings((prev) => ({ ...prev, widgetSizes: next }));
+      try {
+        const saved = await api.saveSettings({ widgetSizes: next }, targetId ?? undefined);
+        setSettings(saved);
+      } catch (err) {
+        setToast(err instanceof Error ? err.message : t('common.saveFailed'));
+      }
+    },
+    [settings.widgetSizes, targetId, t],
+  );
+
   return (
     <div className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-8">
       <header className="mb-6">
@@ -411,7 +427,7 @@ export function HomeView({
       ) : null}
 
       {settings.widgetsEnabled && settings.widgetPosition === 'top' ? (
-        <Widgets settings={settings} onSaveNotes={user ? saveNotes : undefined} />
+        <Widgets settings={settings} onSaveNotes={user ? saveNotes : undefined} onSaveWidgetSize={user ? saveWidgetSize : undefined} />
       ) : null}
 
       {editMode && user ? (
@@ -490,7 +506,7 @@ export function HomeView({
 
       {settings.widgetsEnabled && settings.widgetPosition === 'bottom' ? (
         <div className="mt-6">
-          <Widgets settings={settings} onSaveNotes={user ? saveNotes : undefined} />
+          <Widgets settings={settings} onSaveNotes={user ? saveNotes : undefined} onSaveWidgetSize={user ? saveWidgetSize : undefined} />
         </div>
       ) : null}
 

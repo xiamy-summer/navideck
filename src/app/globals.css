@@ -638,6 +638,85 @@ body[data-has-bg].dark .settings-section {
   line-height: 1.65;
 }
 
+/* ================= 小组件瀑布流网格 ================= */
+.widget-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  grid-auto-rows: 8px;
+}
+@media (min-width: 640px) {
+  .widget-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1280px) {
+  .widget-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* 单卡尺寸菜单 */
+.widget-size-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 132px;
+  margin-top: 4px;
+  padding: 4px;
+  border: 1px solid rgb(var(--line));
+  border-radius: 12px;
+  background: rgb(var(--surface));
+  box-shadow: 0 14px 30px -18px rgb(15 23 42 / 0.45);
+}
+.widget-size-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 5px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: rgb(var(--ink));
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.widget-size-item:hover {
+  background: rgb(var(--brand) / 0.1);
+}
+.widget-size-item[data-active='true'] {
+  color: rgb(var(--brand));
+  font-weight: 500;
+}
+
+/* 尺寸差异：紧凑档更小、大档更舒展 */
+[data-wsize='sm'] > .card.widget {
+  padding: 11px 12px;
+}
+[data-wsize='sm'] .widget-title {
+  font-size: 12px;
+}
+[data-wsize='sm'] .widget-metric-val {
+  font-size: 15px;
+}
+[data-wsize='sm'] .widget-clock-time {
+  font-size: 24px;
+}
+[data-wsize='sm'] .widget-head {
+  margin-bottom: 7px;
+}
+[data-wsize='lg'] > .card.widget {
+  padding: 18px;
+}
+[data-wsize='lg'] .widget-title {
+  font-size: 14px;
+}
+[data-wsize='lg'] .widget-metric-val {
+  font-size: 21px;
+}
+[data-wsize='lg'] .widget-clock-time {
+  font-size: 38px;
+}
+
 /* 空态 / 加载态：统一的图标块 + 提示文案 */
 .widget-empty {
   display: flex;

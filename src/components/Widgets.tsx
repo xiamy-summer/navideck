@@ -12,6 +12,8 @@ interface Props {
   settings: Settings;
   /** 便签保存回调（首页直接编辑用）；不传则便签为只读 */
   onSaveNotes?: (text: string) => Promise<void> | void;
+  /** 单个小组件尺寸调整回调；不传则不显示尺寸入口 */
+  onSaveWidgetSize?: (key: string, size: 'sm' | 'md' | 'lg') => Promise<void> | void;
 }
 
 function fmtRate(bytes: number): string {
@@ -563,26 +565,201 @@ function NotesCard({ text, onSave }: { text: string; onSave?: (text: string) => 
   );
 }
 
-/* ----------------------------- 容器 ----------------------------- */
-export function Widgets({ settings, onSaveNotes }: Props) {
-  const cards: React.ReactNode[] = [];
-  if (settings.widgetSystem) cards.push(<SystemCard key="system" refreshSec={settings.widgetRefresh} />);
-  if (settings.widgetDocker && settings.dockerEnabled) cards.push(<DockerCard key="docker" refreshSec={settings.widgetRefresh} />);
-  if (settings.widgetClock) cards.push(<ClockCard key="clock" />);
-  if (settings.widgetWeather) cards.push(<WeatherCard key="weather" city={settings.widgetWeatherCity} refreshSec={settings.widgetRefresh} />);
-  if (settings.widgetRss) cards.push(<RssCard key="rss" feeds={settings.widgetRssFeeds} max={settings.widgetRssMax} refreshSec={settings.widgetRefresh} />);
-  if (settings.widgetNotes) cards.push(<NotesCard key="notes" text={settings.widgetNotesText} onSave={onSaveNotes} />);
+/* ----------------------------- 容器：瀑布流 + 单卡尺寸 ----------------------------- */
 
-  if (!cards.length) return null;
+type WidgetSize = 'sm' | 'md' | 'lg';
+const SIZE_ORDER: readonly WidgetSize[] = ['sm', 'md', 'lg'] as const;
 
-  const size = settings.widgetSize ?? 'md';
+/**
+ * 尺寸示意图（内联 SVG，不依赖图标包）：外框表示卡片，
+ * 填充块的宽度表示该档位占的列宽，离线/未打包也不会有降级文字。
+ */
+function SizeGlyph({ size }: { size: WidgetSize }) {
+  const barW = size === 'sm' ? 6 : size === 'md' ? 10 : 17;
+  const barH = size === 'sm' ? 5 : size === 'md' ? 7 : 7;
+  const barY = (13 - barH) / 2;
   return (
-    <div className={`mb-5 grid gap-3 ${size === 'lg' ? 'sm:grid-cols-2 xl:grid-cols-4' : size === 'sm' ? 'sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4' : 'sm:grid-cols-2 xl:grid-cols-3'}`}>
-      {cards.map((card) => (
-        <div key={(card as React.ReactElement).key} className={size === 'lg' ? 'sm:col-span-2' : undefined}>
-          {card}
+    <svg width="21" height="13" viewBox="0 0 21 13" aria-hidden="true" className="flex-none">
+      <rect x="0.5" y="0.5" width="20" height="12" rx="3" fill="none" stroke="currentColor" strokeOpacity="0.35" />
+      <rect x="2" y={barY} width={barW} height={barH} rx="1.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+function GridItem({
+  itemKey,
+  size,
+  span,
+  onChangeSize,
+  labelOf,
+  sizeTitle,
+  open,
+  onToggle,
+  children,
+}: {
+  itemKey: string;
+  size: WidgetSize;
+  span: number;
+  onChangeSize?: (key: string, size: WidgetSize) => void;
+  labelOf: (s: WidgetSize) => string;
+  sizeTitle: string;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      data-wkey={itemKey}
+      data-wsize={size}
+      style={{ gridRow: `span ${span}` }}
+      className={`group/w relative ${size === 'lg' ? 'sm:col-span-2' : ''}`}
+    >
+      {children}
+      {onChangeSize ? (
+        <div className="absolute right-1.5 top-1.5 z-20 flex flex-col items-end" data-wmenu>
+          <button
+            type="button"
+            className={`widget-head-btn ${open ? '' : 'opacity-0 group-hover/w:opacity-100 focus-visible:opacity-100'}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggle();
+            }}
+            title={sizeTitle}
+          >
+            <Icon icon="mdi:view-dashboard-outline" size={14} title={sizeTitle} />
+          </button>
+          {open ? (
+            <div className="widget-size-menu">
+              {SIZE_ORDER.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  className="widget-size-item"
+                  data-active={size === s}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onChangeSize(itemKey, s);
+                    onToggle(); // 选完立即收起菜单
+                  }}
+                >
+                  <SizeGlyph size={s} />
+                  {labelOf(s)}
+                  {size === s ? <Icon icon="mdi:check" size={13} className="ml-auto" title={labelOf(s)} /> : null}
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * 瀑布流布局：细粒度行（8px）+ 实测卡片高度换算 span，
+ * 让每张卡按自身内容高度错落排列，而不是被同一行最高的卡拉伸。
+ */
+function WidgetGrid({
+  items,
+  sizeOf,
+  onChangeSize,
+  labelOf,
+  sizeTitle,
+}: {
+  items: Array<{ key: string; node: React.ReactNode }>;
+  sizeOf: (key: string) => WidgetSize;
+  onChangeSize?: (key: string, size: WidgetSize) => void;
+  labelOf: (s: WidgetSize) => string;
+  sizeTitle: string;
+}) {
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  const [spans, setSpans] = useState<Record<string, number>>({});
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const layoutKey = items.map((i) => `${i.key}:${sizeOf(i.key)}`).join('|');
+
+  useEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+    const ROW = 8;
+    const GAP = 12;
+    const measure = () => {
+      const next: Record<string, number> = {};
+      grid.querySelectorAll<HTMLElement>('[data-wkey]').forEach((box) => {
+        const inner = box.firstElementChild as HTMLElement | null;
+        if (!inner) return;
+        const h = inner.getBoundingClientRect().height;
+        next[box.dataset.wkey as string] = Math.max(1, Math.ceil((h + GAP) / (ROW + GAP)));
+      });
+      setSpans((prev) => {
+        const keys = Object.keys(next);
+        if (keys.length === Object.keys(prev).length && keys.every((k) => prev[k] === next[k])) return prev;
+        return next;
+      });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    grid.querySelectorAll<HTMLElement>('[data-wkey]').forEach((box) => {
+      const inner = box.firstElementChild;
+      if (inner) ro.observe(inner);
+    });
+    return () => ro.disconnect();
+  }, [layoutKey]);
+
+  // 点空白处关闭尺寸菜单
+  useEffect(() => {
+    if (!openKey) return;
+    const close = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest('[data-wmenu]')) setOpenKey(null);
+    };
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [openKey]);
+
+  return (
+    <div ref={gridRef} className="widget-grid mb-5">
+      {items.map(({ key, node }) => (
+        <GridItem
+          key={key}
+          itemKey={key}
+          size={sizeOf(key)}
+          span={spans[key] ?? 1}
+          onChangeSize={onChangeSize}
+          labelOf={labelOf}
+          sizeTitle={sizeTitle}
+          open={openKey === key}
+          onToggle={() => setOpenKey(openKey === key ? null : key)}
+        >
+          {node}
+        </GridItem>
       ))}
     </div>
+  );
+}
+
+export function Widgets({ settings, onSaveNotes, onSaveWidgetSize }: Props) {
+  const { t } = useI18n();
+  const items: Array<{ key: string; node: React.ReactNode }> = [];
+  if (settings.widgetSystem) items.push({ key: 'system', node: <SystemCard refreshSec={settings.widgetRefresh} /> });
+  if (settings.widgetDocker && settings.dockerEnabled) items.push({ key: 'docker', node: <DockerCard refreshSec={settings.widgetRefresh} /> });
+  if (settings.widgetClock) items.push({ key: 'clock', node: <ClockCard /> });
+  if (settings.widgetWeather) items.push({ key: 'weather', node: <WeatherCard city={settings.widgetWeatherCity} refreshSec={settings.widgetRefresh} /> });
+  if (settings.widgetRss) items.push({ key: 'rss', node: <RssCard feeds={settings.widgetRssFeeds} max={settings.widgetRssMax} refreshSec={settings.widgetRefresh} /> });
+  if (settings.widgetNotes) items.push({ key: 'notes', node: <NotesCard text={settings.widgetNotesText} onSave={onSaveNotes} /> });
+
+  if (!items.length) return null;
+
+  const fallback = settings.widgetSize ?? 'md';
+  const sizeOf = (key: string): WidgetSize => settings.widgetSizes?.[key] ?? fallback;
+  const labelOf = (s: WidgetSize) =>
+    t(s === 'sm' ? 'appearance.widgetSizeSm' : s === 'md' ? 'appearance.widgetSizeMd' : 'appearance.widgetSizeLg');
+
+  return (
+    <WidgetGrid
+      items={items}
+      sizeOf={sizeOf}
+      onChangeSize={onSaveWidgetSize}
+      labelOf={labelOf}
+      sizeTitle={t('widget.adjustSize')}
+    />
   );
 }

@@ -125,8 +125,10 @@ export interface Settings {
   widgetSystem: boolean;
   widgetDocker: boolean;
   widgetRefresh: number;
-  /** 小组件大小：sm 紧凑 / md 标准 / lg 占两列 */
+  /** 小组件默认大小：sm 紧凑 / md 标准 / lg 占两列（被 widgetSizes 单独覆盖） */
   widgetSize: 'sm' | 'md' | 'lg';
+  /** 单个小组件的大小覆盖，键为组件名（system/docker/clock/weather/rss/notes） */
+  widgetSizes: Record<string, 'sm' | 'md' | 'lg'>;
 
   /** 扩展小部件（时钟 / 天气 / RSS / 便签） */
   widgetClock: boolean;
@@ -211,6 +213,7 @@ export const DEFAULT_SETTINGS: Settings = {
   widgetDocker: true,
   widgetRefresh: 10,
   widgetSize: 'md',
+  widgetSizes: {},
 
   widgetClock: true,
   widgetWeather: false,

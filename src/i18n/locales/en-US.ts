@@ -483,8 +483,8 @@ export const enUS: Record<string, string> = {
   'appearance.widgetNotes': 'Notes widget',
   'appearance.widgetNotesText': 'Notes content',
   'appearance.widgetNotesTextHint': 'You can also edit it via the pencil on the home page card',
-  'appearance.widgetSize': 'Widget size',
-  'appearance.widgetSizeHint': 'Compact / Standard / Large (2 columns)',
+  'appearance.widgetSize': 'Default widget size',
+  'appearance.widgetSizeHint': 'Each card can be sized individually (hover its top-right corner)',
   'appearance.widgetSizeSm': 'Compact',
   'appearance.widgetSizeMd': 'Standard',
   'appearance.widgetSizeLg': 'Large',
@@ -510,6 +510,7 @@ export const enUS: Record<string, string> = {
   'widget.notesEdit': 'Edit note',
   'widget.notesPlaceholder': 'Write something… Markdown supported (Ctrl/⌘ + Enter to save)',
   'widget.notesPlaceholderHint': 'Markdown · Ctrl/⌘ + Enter to save · Esc to close',
+  'widget.adjustSize': 'Resize',
 
   'login.sso': 'Sign in with SSO',
 };

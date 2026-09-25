@@ -483,8 +483,8 @@ export const zhCN: Record<string, string> = {
   'appearance.widgetNotes': '便签小组件',
   'appearance.widgetNotesText': '便签内容',
   'appearance.widgetNotesTextHint': '也可以直接点首页便签卡片上的铅笔编辑',
-  'appearance.widgetSize': '小组件大小',
-  'appearance.widgetSizeHint': 'sm 紧凑 / 标准 / lg 大卡片（占两列）',
+  'appearance.widgetSize': '小组件默认大小',
+  'appearance.widgetSizeHint': '每张卡片可单独调整（悬停卡片右上角）',
   'appearance.widgetSizeSm': '紧凑',
   'appearance.widgetSizeMd': '标准',
   'appearance.widgetSizeLg': '大（占两列）',
@@ -510,6 +510,7 @@ export const zhCN: Record<string, string> = {
   'widget.notesEdit': '编辑便签',
   'widget.notesPlaceholder': '写点什么…支持 Markdown（Ctrl/⌘ + Enter 保存）',
   'widget.notesPlaceholderHint': '支持 Markdown · Ctrl/⌘ + Enter 保存 · Esc 关闭',
+  'widget.adjustSize': '调整大小',
 
   'login.sso': '使用单点登录',
 };
