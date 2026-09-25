@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import {
   DndContext,
   PointerSensor,
@@ -44,6 +44,8 @@ interface Props {
   onDeleteItem: (item: Item) => void;
   onDeleteGroup: (group: Group) => void;
   onAddItem: (groupId: number) => void;
+  /** 卡片右键菜单：编辑/删除等快捷操作，参数依次为站点、所属分组 id、鼠标事件 */
+  onCardContextMenu?: (item: Item, groupId: number, e: MouseEvent) => void;
 }
 
 function findContainer(id: string, groups: GroupWithItems[]): string | null {
@@ -55,8 +57,42 @@ function findContainer(id: string, groups: GroupWithItems[]): string | null {
 
 export function NavBoard(props: Props) {
   const { groups, setGroups, settings, netMode, editMode, onPersist } = props;
+  const { t } = useI18n();
   const snapshot = useRef<GroupWithItems[] | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [ctx, setCtx] = useState<{ item: Item; groupId: number; x: number; y: number } | null>(null);
+  const ctxRef = useRef<HTMLDivElement | null>(null);
+
+  // 右键菜单：点击外部 / ESC / 滚动时关闭
+  useEffect(() => {
+    if (!ctx) return;
+    const onDown = (e: globalThis.MouseEvent) => {
+      if (ctxRef.current && !ctxRef.current.contains(e.target as Node)) setCtx(null);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setCtx(null);
+    };
+    const onScroll = () => setCtx(null);
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    window.addEventListener('scroll', onScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+      window.removeEventListener('scroll', onScroll, true);
+    };
+  }, [ctx]);
+
+  const openCtx = (item: Item, groupId: number, e: MouseEvent) => {
+    e.preventDefault();
+    const MENU_W = 152;
+    const MENU_H = editMode ? 96 : 132;
+    let x = e.clientX;
+    let y = e.clientY;
+    if (x + MENU_W > window.innerWidth) x = Math.max(8, x - MENU_W);
+    if (y + MENU_H > window.innerHeight) y = Math.max(8, y - MENU_H);
+    setCtx({ item, groupId, x, y });
+  };
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -137,6 +173,7 @@ export function NavBoard(props: Props) {
   };
 
   return (
+    <>
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
@@ -151,11 +188,56 @@ export function NavBoard(props: Props) {
       <SortableContext items={groups.map((g) => `g-${g.id}`)} strategy={verticalListSortingStrategy}>
         <div className="space-y-5">
           {groups.map((group) => (
-            <SortableGroup key={group.id} group={group} {...props} activeId={activeId} />
+            <SortableGroup key={group.id} group={group} {...props} activeId={activeId} onCardContextMenu={openCtx} />
           ))}
         </div>
       </SortableContext>
     </DndContext>
+
+    {ctx ? (
+      <div
+        ref={ctxRef}
+        className="card fixed z-50 min-w-[152px] animate-pop overflow-hidden rounded-lg border border-line p-1 shadow-card"
+        style={{ left: ctx.x, top: ctx.y }}
+      >
+        {!editMode ? (
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[13px] text-ink hover:bg-brand/10"
+            onClick={() => {
+              props.onOpenItem(ctx.item);
+              setCtx(null);
+            }}
+          >
+            <Icon icon="mdi:open-in-new" size={16} title={t('modal.openNew')} />
+            <span>{t('modal.openNew')}</span>
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[13px] text-ink hover:bg-brand/10"
+          onClick={() => {
+            props.onEditItem(ctx.item, ctx.groupId);
+            setCtx(null);
+          }}
+        >
+          <Icon icon="mdi:pencil-outline" size={16} title={t('common.edit')} />
+          <span>{t('common.edit')}</span>
+        </button>
+        <button
+          type="button"
+          className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[13px] text-red-500 hover:bg-red-500/10"
+          onClick={() => {
+            props.onDeleteItem(ctx.item);
+            setCtx(null);
+          }}
+        >
+          <Icon icon="mdi:trash-can-outline" size={16} title={t('common.delete')} />
+          <span>{t('common.delete')}</span>
+        </button>
+      </div>
+    ) : null}
+    </>
   );
 }
 
@@ -331,6 +413,7 @@ function SortableItem({ item, ...props }: Props & { item: Item; activeId: string
       onClick={() => {
         if (!editMode) props.onOpenItem(item);
       }}
+      onContextMenu={(e) => props.onCardContextMenu?.(item, item.groupId, e)}
       title={item.desc || item.title}
     >
       <div className={`icon-tile ${item.cardSize === 'sm' ? '!p-1.5' : ''}`}>
