@@ -330,6 +330,11 @@ export const enUS: Record<string, string> = {
   'service.testFail': 'Connection failed',
   'service.headersHint': 'Headers, one per line, format: Name: value',
   'service.fieldsHint': 'Fields, one per line, format: label path, e.g. movies length',
+  'service.urlSource': 'Service URL',
+  'service.urlLan': 'LAN address',
+  'service.urlWan': 'WAN address',
+  'service.urlCustom': 'Custom address',
+  'service.urlEmptyHint': 'Site has no {type} set, choose custom address instead',
 
   'tab.oidc': 'Single sign-on',
 

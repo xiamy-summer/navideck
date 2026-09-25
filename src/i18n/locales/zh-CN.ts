@@ -330,6 +330,11 @@ export const zhCN: Record<string, string> = {
   'service.testFail': '连接失败',
   'service.headersHint': '请求头，每行一条，格式：Name: value',
   'service.fieldsHint': '取值字段，每行一条，格式：标签 路径，例：movies length',
+  'service.urlSource': '服务地址',
+  'service.urlLan': '内网地址',
+  'service.urlWan': '外网地址',
+  'service.urlCustom': '自定义地址',
+  'service.urlEmptyHint': '站点未填{type}，请选择自定义地址填写',
 
   'tab.oidc': '单点登录',
 

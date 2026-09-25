@@ -82,6 +82,15 @@ export function ItemDialog({ draft, groups, onClose, onSave, onDelete }: ItemDia
 
   const [templates, setTemplates] = useState<ServiceTemplate[]>([]);
   const [svc, setSvc] = useState<ItemService | null>(() => parseService(draft.service));
+  /** 服务地址来源：内网 / 外网 / 自定义；默认按已存 url 与站点地址的关系推断 */
+  const [urlSrc, setUrlSrc] = useState<'lan' | 'wan' | 'custom'>(() => {
+    const s = parseService(draft.service);
+    const lan = form.urlLan || '';
+    const wan = form.urlWan || '';
+    if (s?.url && lan && s.url === lan) return 'lan';
+    if (s?.url && wan && s.url === wan) return 'wan';
+    return 'custom';
+  });
   const [testing, setTesting] = useState(false);
   const [probe, setProbe] = useState<ProbeResult | null>(null);
   const [containers, setContainers] = useState<DockerContainer[]>([]);
@@ -108,6 +117,25 @@ export function ItemDialog({ draft, groups, onClose, onSave, onDelete }: ItemDia
     setProbe(null);
     setForm((prev) => ({ ...prev, service: JSON.stringify(next) }));
   };
+
+  /** 切换服务地址来源：内网/外网取站点对应字段（只读），自定义允许手填 */
+  const applyUrlSrc = (src: 'lan' | 'wan' | 'custom') => {
+    setUrlSrc(src);
+    if (src === 'lan') updateSvc({ url: form.urlLan });
+    else if (src === 'wan') updateSvc({ url: form.urlWan });
+  };
+
+  // 地址来源为内网/外网时，跟随站点对应字段变化（改站点地址即同步服务地址）
+  useEffect(() => {
+    if (!svc || urlSrc === 'custom') return;
+    const target = urlSrc === 'lan' ? form.urlLan : form.urlWan;
+    if (svc.url === target) return;
+    const next: ItemService = { ...svc, url: target };
+    setSvc(next);
+    setProbe(null);
+    setForm((prev) => ({ ...prev, service: JSON.stringify(next) }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.urlLan, form.urlWan, urlSrc]);
 
   const clearSvc = () => {
     setSvc(null);
@@ -231,7 +259,12 @@ export function ItemDialog({ draft, groups, onClose, onSave, onDelete }: ItemDia
             {!svc ? (
               <button
                 className="btn"
-                onClick={() => updateSvc({ type: templates[0]?.id ?? 'custom', url: form.urlLan || '', key: '' })}
+                onClick={() => {
+                  // 新增时优先用内网地址（站点地址与 JSON 同步，保证服务地址跟随站点变化）
+                  const src: 'lan' | 'wan' | 'custom' = form.urlLan ? 'lan' : form.urlWan ? 'wan' : 'custom';
+                  setUrlSrc(src);
+                  updateSvc({ type: templates[0]?.id ?? 'custom', url: form.urlLan || form.urlWan || '', key: '' });
+                }}
               >
                 <Icon icon="mdi:chart-box-outline" size={16} title={t('service.add')} />
                 {t('service.add')}
@@ -247,13 +280,32 @@ export function ItemDialog({ draft, groups, onClose, onSave, onDelete }: ItemDia
                     ))}
                     <option value="custom">{t('service.custom')}</option>
                   </select>
+                  <select className="field" value={urlSrc} onChange={(e) => applyUrlSrc(e.target.value as 'lan' | 'wan' | 'custom')}>
+                    <option value="lan">{t('service.urlLan')}</option>
+                    <option value="wan">{t('service.urlWan')}</option>
+                    <option value="custom">{t('service.urlCustom')}</option>
+                  </select>
+                </div>
+
+                {urlSrc === 'custom' ? (
                   <input
                     className="field"
                     placeholder="http://192.168.1.10:8989"
                     value={svc.url}
                     onChange={(e) => updateSvc({ url: e.target.value })}
                   />
-                </div>
+                ) : (
+                  <div className={`field flex items-center gap-2 ${svc.url ? '' : '!text-muted'}`}>
+                    <Icon icon={urlSrc === 'lan' ? 'mdi:lan' : 'mdi:earth'} size={15} title={urlSrc === 'lan' ? t('service.urlLan') : t('service.urlWan')} />
+                    {svc.url ? (
+                      <span className="truncate">{svc.url}</span>
+                    ) : (
+                      <span className="truncate text-[12px]">
+                        {t('service.urlEmptyHint', { type: urlSrc === 'lan' ? t('service.urlLan') : t('service.urlWan') })}
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 <input
                   className="field"
