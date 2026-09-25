@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { api, type DockerListResult, type MetricsResult } from '@/lib/api-client';
 import { renderMarkdown } from '@/lib/markdown';
 import { Icon } from './Icon';
@@ -570,6 +570,13 @@ function NotesCard({ text, onSave }: { text: string; onSave?: (text: string) => 
 type WidgetSize = 'sm' | 'md' | 'lg';
 const SIZE_ORDER: readonly WidgetSize[] = ['sm', 'md', 'lg'] as const;
 
+/** 两个「key → 数值」表是否等价（用于布版结果比对，等价就不 setState，避免反复重渲染） */
+function sameNums(a: Record<string, number>, b: Record<string, number>): boolean {
+  const ka = Object.keys(a);
+  if (ka.length !== Object.keys(b).length) return false;
+  return ka.every((k) => Math.abs((a[k] ?? 0) - (b[k] ?? 0)) < 0.5);
+}
+
 /**
  * 尺寸示意图（内联 SVG，不依赖图标包）：外框表示卡片，
  * 填充块的宽度表示该档位占的列宽，离线/未打包也不会有降级文字。
@@ -590,6 +597,7 @@ function GridItem({
   itemKey,
   size,
   span,
+  fill,
   onChangeSize,
   labelOf,
   sizeTitle,
@@ -600,6 +608,8 @@ function GridItem({
   itemKey: string;
   size: WidgetSize;
   span: number;
+  /** 该列底部补平所需的高度（px），>0 时卡片伸展填满 */
+  fill: number;
   onChangeSize?: (key: string, size: WidgetSize) => void;
   labelOf: (s: WidgetSize) => string;
   sizeTitle: string;
@@ -607,12 +617,15 @@ function GridItem({
   onToggle: () => void;
   children: React.ReactNode;
 }) {
+  const wide = size === 'lg';
   return (
     <div
       data-wkey={itemKey}
       data-wsize={size}
-      style={{ gridRow: `span ${span}` }}
-      className={`group/w relative ${size === 'lg' ? 'sm:col-span-2' : ''}`}
+      data-wspan={wide ? '2' : undefined}
+      data-fill={fill > 0 ? '1' : undefined}
+      style={{ gridRow: `span ${span}`, minHeight: fill > 0 ? fill : undefined }}
+      className={`group/w relative ${wide ? 'sm:col-span-2' : ''}`}
     >
       {children}
       {onChangeSize ? (
@@ -674,36 +687,97 @@ function WidgetGrid({
 }) {
   const gridRef = useRef<HTMLDivElement | null>(null);
   const [spans, setSpans] = useState<Record<string, number>>({});
+  /** 每列最后一张卡的补平高度（px）：把列底对齐，避免留下空白 */
+  const [fills, setFills] = useState<Record<string, number>>({});
   const [openKey, setOpenKey] = useState<string | null>(null);
+  // 仅用于在视口变化时触发一次重渲染（布版在每次渲染后执行）
+  const [, setTick] = useState(0);
   const layoutKey = items.map((i) => `${i.key}:${sizeOf(i.key)}`).join('|');
 
+  // 视口变化 → 列数变化 → 重新布版
   useEffect(() => {
+    const bump = () => setTick((v) => v + 1);
+    window.addEventListener('resize', bump);
+    return () => window.removeEventListener('resize', bump);
+  }, [layoutKey]);
+
+  /**
+   * 布版（每次渲染后跑一次，值稳定后不再 setState，自然收敛）：
+   * 1. 量每张卡的自然内容高度 → 定跨行数，卡片按内容高度错落；
+   * 2. 找出每列最后一张卡，把它伸展到全局列底，消除底部空白。
+   * 位置一律由 wrapper 的「轨道高度」推算（span × 行高），不看被拉伸后的卡片高度，
+   * 否则会出现「拉伸 → 高度变化 → 重算 → 再拉伸」的自激循环。
+   */
+  useLayoutEffect(() => {
     const grid = gridRef.current;
     if (!grid) return;
     const ROW = 8;
     const GAP = 12;
-    const measure = () => {
-      const next: Record<string, number> = {};
-      grid.querySelectorAll<HTMLElement>('[data-wkey]').forEach((box) => {
-        const inner = box.firstElementChild as HTMLElement | null;
-        if (!inner) return;
-        const h = inner.getBoundingClientRect().height;
-        next[box.dataset.wkey as string] = Math.max(1, Math.ceil((h + GAP) / (ROW + GAP)));
-      });
-      setSpans((prev) => {
-        const keys = Object.keys(next);
-        if (keys.length === Object.keys(prev).length && keys.every((k) => prev[k] === next[k])) return prev;
-        return next;
-      });
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    grid.querySelectorAll<HTMLElement>('[data-wkey]').forEach((box) => {
-      const inner = box.firstElementChild;
-      if (inner) ro.observe(inner);
+    const boxes = [...grid.querySelectorAll<HTMLElement>('[data-wkey]')];
+    if (!boxes.length) return;
+
+    // 1) 暂时去掉补平效果（min-height + flex 填充），量卡片自然高度
+    boxes.forEach((box) => {
+      const card = box.firstElementChild as HTMLElement | null;
+      box.style.minHeight = '';
+      if (card) {
+        card.style.flex = 'none';
+        card.style.height = 'auto';
+      }
     });
-    return () => ro.disconnect();
-  }, [layoutKey]);
+    const nextSpans: Record<string, number> = {};
+    boxes.forEach((box) => {
+      const card = box.firstElementChild as HTMLElement | null;
+      if (!card) return;
+      const h = card.getBoundingClientRect().height;
+      nextSpans[box.dataset.wkey as string] = Math.max(1, Math.ceil((h + GAP) / (ROW + GAP)));
+    });
+
+    // 2) 按当前已应用的跨行数推算轨道底部，找出每列最后一项
+    const cs = getComputedStyle(grid);
+    const cols = cs.gridTemplateColumns.split(' ').filter(Boolean).length || 1;
+    const gapX = parseFloat(cs.columnGap) || GAP;
+    const gridRect = grid.getBoundingClientRect();
+    const colW = (gridRect.width - (cols - 1) * gapX) / cols;
+    const colOf = (left: number) =>
+      Math.max(0, Math.min(cols - 1, Math.round((left - gridRect.left) / (colW + gapX))));
+    const rowsInfo = boxes.map((box) => {
+      const r = box.getBoundingClientRect();
+      const key = box.dataset.wkey as string;
+      const span = spans[key] ?? 1;
+      const c0 = colOf(r.left);
+      const c1 = Math.min(cols - 1, c0 + (box.dataset.wspan === '2' ? 1 : 0));
+      return { key, top: r.top, bottom: r.top + span * ROW + (span - 1) * GAP, c0, c1 };
+    });
+    const colBottom = new Array(cols).fill(0);
+    rowsInfo.forEach((r) => {
+      for (let c = r.c0; c <= r.c1; c++) colBottom[c] = Math.max(colBottom[c], r.bottom);
+    });
+    const gridBottom = Math.max(...rowsInfo.map((r) => r.bottom));
+    const nextFills: Record<string, number> = {};
+    rowsInfo.forEach((r) => {
+      // 每列最后一张卡补到全局列底；若它本来就更高，min-height 是空操作，无害
+      const lastInAllColumns = colBottom
+        .slice(r.c0, r.c1 + 1)
+        .every((b) => b - r.bottom < 1);
+      if (lastInAllColumns) nextFills[r.key] = Math.round(gridBottom - r.top);
+    });
+
+    // 2) 直接写回补平高度：state 未变化时 React 不会重渲染，
+    //    必须在这里把刚才临时清掉的样式恢复，否则填充会丢
+    boxes.forEach((box) => {
+      const card = box.firstElementChild as HTMLElement | null;
+      const v = nextFills[box.dataset.wkey as string] ?? 0;
+      box.style.minHeight = v ? `${v}px` : '';
+      if (card) {
+        card.style.flex = '';
+        card.style.height = '';
+      }
+    });
+
+    setSpans((prev) => sameNums(prev, nextSpans) ? prev : nextSpans);
+    setFills((prev) => sameNums(prev, nextFills) ? prev : nextFills);
+  });
 
   // 点空白处关闭尺寸菜单
   useEffect(() => {
@@ -723,6 +797,7 @@ function WidgetGrid({
           itemKey={key}
           size={sizeOf(key)}
           span={spans[key] ?? 1}
+          fill={fills[key] ?? 0}
           onChangeSize={onChangeSize}
           labelOf={labelOf}
           sizeTitle={sizeTitle}

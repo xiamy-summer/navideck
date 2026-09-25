@@ -656,6 +656,17 @@ body[data-has-bg].dark .settings-section {
   }
 }
 
+/* 该列最后一张卡伸展填满列高，消除瀑布流底部空白。
+   用 flex 而不是 height:100%——父级高度来自 min-height（auto），百分比高度不解析。 */
+[data-fill] {
+  display: flex;
+  flex-direction: column;
+}
+[data-fill] > .card.widget {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 /* 单卡尺寸菜单 */
 .widget-size-menu {
   display: flex;
