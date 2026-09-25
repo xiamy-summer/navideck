@@ -585,6 +585,17 @@ function AppearanceTab({
       </Section>
 
       <Section title={t('settings.section.widgetsExt')}>
+        <Row label={t('appearance.widgetSize')} hint={t('appearance.widgetSizeHint')}>
+          <MiniSegment
+            value={settings.widgetSize}
+            options={[
+              { value: 'sm', label: t('appearance.widgetSizeSm') },
+              { value: 'md', label: t('appearance.widgetSizeMd') },
+              { value: 'lg', label: t('appearance.widgetSizeLg') },
+            ]}
+            onChange={(v) => onSave({ widgetSize: v })}
+          />
+        </Row>
         <Row label={t('appearance.widgetClock')}>
           <Switch value={settings.widgetClock} onChange={(v) => onSave({ widgetClock: v })} />
         </Row>

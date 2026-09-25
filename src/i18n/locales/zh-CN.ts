@@ -478,6 +478,11 @@ export const zhCN: Record<string, string> = {
   'appearance.widgetNotes': '便签小组件',
   'appearance.widgetNotesText': '便签内容',
   'appearance.widgetNotesTextHint': '也可以直接点首页便签卡片上的铅笔编辑',
+  'appearance.widgetSize': '小组件大小',
+  'appearance.widgetSizeHint': 'sm 紧凑 / 标准 / lg 大卡片（占两列）',
+  'appearance.widgetSizeSm': '紧凑',
+  'appearance.widgetSizeMd': '标准',
+  'appearance.widgetSizeLg': '大（占两列）',
 
   'widget.clock': '时钟',
   'widget.weather': '天气',
@@ -499,6 +504,7 @@ export const zhCN: Record<string, string> = {
   'widget.notesEmpty': '点击此处开始写便签',
   'widget.notesEdit': '编辑便签',
   'widget.notesPlaceholder': '写点什么…支持 Markdown（Ctrl/⌘ + Enter 保存）',
+  'widget.notesPlaceholderHint': '支持 Markdown · Ctrl/⌘ + Enter 保存 · Esc 关闭',
 
   'login.sso': '使用单点登录',
 };

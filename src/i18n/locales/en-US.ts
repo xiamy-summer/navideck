@@ -478,6 +478,11 @@ export const enUS: Record<string, string> = {
   'appearance.widgetNotes': 'Notes widget',
   'appearance.widgetNotesText': 'Notes content',
   'appearance.widgetNotesTextHint': 'You can also edit it via the pencil on the home page card',
+  'appearance.widgetSize': 'Widget size',
+  'appearance.widgetSizeHint': 'Compact / Standard / Large (2 columns)',
+  'appearance.widgetSizeSm': 'Compact',
+  'appearance.widgetSizeMd': 'Standard',
+  'appearance.widgetSizeLg': 'Large',
 
   'widget.clock': 'Clock',
   'widget.weather': 'Weather',
@@ -499,6 +504,7 @@ export const enUS: Record<string, string> = {
   'widget.notesEmpty': 'Click to start writing',
   'widget.notesEdit': 'Edit note',
   'widget.notesPlaceholder': 'Write something… Markdown supported (Ctrl/⌘ + Enter to save)',
+  'widget.notesPlaceholderHint': 'Markdown · Ctrl/⌘ + Enter to save · Esc to close',
 
   'login.sso': 'Sign in with SSO',
 };

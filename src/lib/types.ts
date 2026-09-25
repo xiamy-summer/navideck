@@ -125,6 +125,8 @@ export interface Settings {
   widgetSystem: boolean;
   widgetDocker: boolean;
   widgetRefresh: number;
+  /** 小组件大小：sm 紧凑 / md 标准 / lg 占两列 */
+  widgetSize: 'sm' | 'md' | 'lg';
 
   /** 扩展小部件（时钟 / 天气 / RSS / 便签） */
   widgetClock: boolean;
@@ -208,6 +210,7 @@ export const DEFAULT_SETTINGS: Settings = {
   widgetSystem: true,
   widgetDocker: true,
   widgetRefresh: 10,
+  widgetSize: 'md',
 
   widgetClock: true,
   widgetWeather: false,

@@ -461,87 +461,51 @@ function RssCard({ feeds, max, refreshSec }: { feeds: string[]; max: number; ref
   );
 }
 
-/* ----------------------------- 便签卡片（可直接在首页编辑） ----------------------------- */
+/* ----------------------------- 便签卡片（弹窗编辑） ----------------------------- */
 function NotesCard({ text, onSave }: { text: string; onSave?: (text: string) => Promise<void> | void }) {
   const { t } = useI18n();
-  const [editing, setEditing] = useState(false);
+  const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(text);
   const [saving, setSaving] = useState(false);
   const areaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // 非编辑态时跟随外部内容（例如在设置中心改过）
+  // 打开弹窗时同步最新内容并聚焦
   useEffect(() => {
-    if (!editing) setDraft(text);
-  }, [text, editing]);
-
-  useEffect(() => {
-    if (editing) areaRef.current?.focus();
-  }, [editing]);
+    if (open) {
+      setDraft(text);
+      setTimeout(() => areaRef.current?.focus(), 60);
+    }
+  }, [open, text]);
 
   const commit = async () => {
     if (!onSave || saving) return;
     setSaving(true);
     try {
       await onSave(draft);
-      setEditing(false);
+      setOpen(false);
     } finally {
       setSaving(false);
     }
   };
 
-  const cancel = () => {
-    setDraft(text);
-    setEditing(false);
-  };
-
   return (
-    <div className={`card widget p-4 ${editing ? 'sm:col-span-2' : ''}`}>
+    <div className="card widget p-4">
       <WidgetHead icon="mdi:file-document-outline" title={t('widget.notes')}>
-        {editing ? (
-          <span className="ml-auto flex flex-none items-center gap-1.5">
-            <button className="btn px-2 py-0.5 text-[11px]" onClick={cancel} disabled={saving}>
-              {t('common.cancel')}
-            </button>
-            <button
-              className="btn btn-primary px-2 py-0.5 text-[11px]"
-              onClick={() => void commit()}
-              disabled={saving}
-            >
-              {saving ? t('common.saving') : t('common.save')}
-            </button>
-          </span>
-        ) : onSave ? (
-          <button className="widget-head-btn" onClick={() => setEditing(true)} title={t('widget.notesEdit')}>
+        {onSave ? (
+          <button className="widget-head-btn" onClick={() => setOpen(true)} title={t('widget.notesEdit')}>
             <Icon icon="mdi:pencil-outline" size={14} title={t('widget.notesEdit')} />
           </button>
         ) : null}
       </WidgetHead>
 
-      {editing ? (
-        <textarea
-          ref={areaRef}
-          className="field widget-notes-area"
-          placeholder={t('widget.notesPlaceholder')}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') {
-              e.preventDefault();
-              cancel();
-            } else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-              e.preventDefault();
-              void commit();
-            }
-          }}
-        />
-      ) : !text.trim() ? (
+      {!text.trim() ? (
         <button
           type="button"
           className="widget-empty w-full"
           data-clickable={onSave ? '' : undefined}
           disabled={!onSave}
           onClick={() => {
-            if (onSave) setEditing(true);
+            if (onSave) setOpen(true);
           }}
         >
           <span className="widget-empty-icon">
@@ -555,6 +519,46 @@ function NotesCard({ text, onSave }: { text: string; onSave?: (text: string) => 
           dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }}
         />
       )}
+
+      {open ? (
+        <div className="modal-backdrop" onClick={() => !saving && setOpen(false)}>
+          <div className="modal w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
+            <h3 className="mb-3 flex items-center gap-2 text-[15px] font-medium">
+              <span className="icon-tile h-7 w-7 !rounded-lg !p-0">
+                <Icon icon="mdi:file-document-outline" size={15} title={t('widget.notes')} />
+              </span>
+              {t('widget.notesEdit')}
+            </h3>
+            <textarea
+              ref={areaRef}
+              className="field widget-notes-area"
+              placeholder={t('widget.notesPlaceholder')}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape' && !saving) {
+                  e.preventDefault();
+                  setOpen(false);
+                } else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                  e.preventDefault();
+                  void commit();
+                }
+              }}
+            />
+            <div className="mt-4 flex items-center justify-between">
+              <span className="text-[11px] text-muted">{t('widget.notesPlaceholderHint')}</span>
+              <span className="flex gap-2">
+                <button className="btn" onClick={() => setOpen(false)} disabled={saving}>
+                  {t('common.cancel')}
+                </button>
+                <button className="btn btn-primary" onClick={() => void commit()} disabled={saving}>
+                  {saving ? t('common.saving') : t('common.save')}
+                </button>
+              </span>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -571,5 +575,14 @@ export function Widgets({ settings, onSaveNotes }: Props) {
 
   if (!cards.length) return null;
 
-  return <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{cards}</div>;
+  const size = settings.widgetSize ?? 'md';
+  return (
+    <div className={`mb-5 grid gap-3 ${size === 'lg' ? 'sm:grid-cols-2 xl:grid-cols-4' : size === 'sm' ? 'sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4' : 'sm:grid-cols-2 xl:grid-cols-3'}`}>
+      {cards.map((card) => (
+        <div key={(card as React.ReactElement).key} className={size === 'lg' ? 'sm:col-span-2' : undefined}>
+          {card}
+        </div>
+      ))}
+    </div>
+  );
 }
