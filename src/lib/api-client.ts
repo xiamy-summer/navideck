@@ -153,6 +153,7 @@ export const api = {
       color?: string | null;
       service?: string | null;
       container?: string | null;
+      cardSize?: 'sm' | 'md' | 'lg' | null;
     },
     as?: number | null,
   ) => request<Item>(`/api/items${asQuery(as)}`, { method: 'POST', body: JSON.stringify(input) }),
@@ -173,6 +174,7 @@ export const api = {
         | 'groupId'
         | 'service'
         | 'container'
+        | 'cardSize'
       >
     >,
     as?: number | null,

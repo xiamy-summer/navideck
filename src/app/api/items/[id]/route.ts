@@ -27,6 +27,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     if (body.sort !== undefined) patch.sort = Number(body.sort);
     if (body.service !== undefined) patch.service = body.service;
     if (body.container !== undefined) patch.container = body.container;
+    if (body.cardSize !== undefined) patch.cardSize = body.cardSize;
     const updated = updateItem(target.owner.id, Number(id), patch);
     if (!updated) return fail('站点不存在', 404);
     return ok(updated);

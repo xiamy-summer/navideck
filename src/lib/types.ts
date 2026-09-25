@@ -44,6 +44,8 @@ export interface Item {
   service?: string | null;
   /** 关联的 Docker 容器名，用于在卡片上显示运行状态 */
   container?: string | null;
+  /** 卡片尺寸：sm（1 列小卡）/ md（1 列默认）/ lg（2 列宽卡）；默认 md */
+  cardSize?: 'sm' | 'md' | 'lg' | null;
 }
 
 /** 站点绑定的服务集成配置，对应 Homepage 的 service widget */

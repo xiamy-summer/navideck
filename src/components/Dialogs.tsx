@@ -22,6 +22,8 @@ export interface ItemDraft {
   service: string | null;
   /** 关联的 Docker 容器名，用于在卡片上显示运行状态 */
   container: string | null;
+  /** 卡片尺寸：sm / md / lg */
+  cardSize: 'sm' | 'md' | 'lg' | null;
 }
 
 function parseService(raw: string | null): ItemService | null {
@@ -376,6 +378,18 @@ export function ItemDialog({ draft, groups, onClose, onSave, onDelete }: ItemDia
                 <option value="self">{t('dialog.item.openSelf')}</option>
               </select>
             </div>
+            <div>
+              <div className="mb-1.5 text-[13px] text-muted">{t('dialog.item.cardSize')}</div>
+              <select
+                className="field"
+                value={form.cardSize ?? 'md'}
+                onChange={(e) => set('cardSize', e.target.value === 'md' ? null : (e.target.value as 'sm' | 'lg'))}
+              >
+                <option value="sm">{t('dialog.item.sizeSm')}</option>
+                <option value="md">{t('dialog.item.sizeMd')}</option>
+                <option value="lg">{t('dialog.item.sizeLg')}</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -492,6 +506,7 @@ export function emptyItemDraft(groupId: number): ItemDraft {
     color: null,
     service: null,
     container: null,
+    cardSize: null,
   };
 }
 
@@ -508,5 +523,6 @@ export function itemToDraft(item: Item): ItemDraft {
     color: item.color,
     service: item.service ?? null,
     container: item.container ?? null,
+    cardSize: item.cardSize ?? null,
   };
 }

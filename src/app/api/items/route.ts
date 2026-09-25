@@ -23,6 +23,7 @@ export async function POST(req: Request) {
       color: body.color ?? null,
       service: body.service ?? null,
       container: body.container ?? null,
+      cardSize: body.cardSize ?? null,
     });
     return ok(item, { status: 201 });
   });

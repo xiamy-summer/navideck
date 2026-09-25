@@ -310,13 +310,22 @@ function SortableItem({ item, ...props }: Props & { item: Item; activeId: string
         };
   }
 
+  const cardSpan = item.cardSize === 'lg' ? 2 : item.cardSize === 'sm' ? 1 : 1;
+
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Translate.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
+      style={{
+        transform: CSS.Translate.toString(transform),
+        transition,
+        opacity: isDragging ? 0.4 : 1,
+        gridColumn: `span ${cardSpan}`,
+      }}
       {...(editMode ? attributes : {})}
       {...(editMode ? listeners : {})}
       className={`link-card card relative flex min-h-[92px] flex-col items-center justify-center gap-1.5 p-3 text-center ${
+        item.cardSize === 'sm' ? 'min-h-[76px] gap-1' : ''
+      } ${item.cardSize === 'lg' ? 'flex-row gap-3 text-left' : ''} ${
         editMode ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
       }`}
       onClick={() => {
@@ -324,23 +333,35 @@ function SortableItem({ item, ...props }: Props & { item: Item; activeId: string
       }}
       title={item.desc || item.title}
     >
-      <div className="icon-tile">
-        <Icon icon={item.icon} size={settings.iconSize || 34} title={item.title} />
+      <div className={`icon-tile ${item.cardSize === 'sm' ? '!p-1.5' : ''}`}>
+        <Icon icon={item.icon} size={item.cardSize === 'sm' ? Math.round((settings.iconSize || 34) * 0.75) : settings.iconSize || 34} title={item.title} />
       </div>
 
       <span
-        className="flex w-full items-center justify-center gap-1.5 text-[13px] font-medium"
+        className={`flex w-full items-center justify-center gap-1.5 text-[13px] font-medium ${
+          item.cardSize === 'lg' ? 'justify-start' : ''
+        }`}
         title={dot ? dot.title : undefined}
       >
         {dot ? <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot.cls}`} /> : null}
         <span className="truncate">{item.title}</span>
       </span>
       {settings.showDesc && item.desc ? (
-        <span className="w-full truncate text-[11px] text-muted">{item.desc}</span>
+        <span
+          className={`w-full truncate text-[11px] text-muted ${
+            item.cardSize === 'lg' ? 'text-left' : 'text-center'
+          }`}
+        >
+          {item.desc}
+        </span>
       ) : null}
 
-      {serviceStatus?.[item.id] ? (
-        <span className="flex w-full flex-wrap items-center justify-center gap-x-2 text-[10px]">
+      {serviceStatus?.[item.id]?.fields?.length ? (
+        <span
+          className={`mt-0.5 flex w-full flex-wrap items-center justify-center gap-1 ${
+            item.cardSize === 'lg' ? 'justify-start' : ''
+          }`}
+        >
           {serviceStatus[item.id].ok ? null : (
             <span
               className="dot-err dot-pulse h-1.5 w-1.5 shrink-0 rounded-full"
@@ -348,8 +369,26 @@ function SortableItem({ item, ...props }: Props & { item: Item; activeId: string
             />
           )}
           {serviceStatus[item.id].fields.map((f) => (
-            <span key={f.label} className="text-muted">
-              {f.label} {f.value}
+            <span
+              key={f.label}
+              title={`${f.label} ${f.value}`}
+              className={`inline-flex max-w-full items-center gap-1 rounded-full bg-brand/10 leading-none text-brand ${
+                item.cardSize === 'lg' ? 'px-2 py-1 text-[11px]' : item.cardSize === 'sm' ? 'px-1 py-0.5 text-[9px]' : 'px-1.5 py-0.5 text-[10px]'
+              }`}
+            >
+              {f.icon ? <Icon icon={f.icon} size={10} title={f.label} /> : null}
+              <span className="truncate">{f.value}</span>
+              {f.bar || (typeof f.raw === 'number' && f.value.includes('%')) ? (
+                <span className="h-1 w-6 shrink-0 overflow-hidden rounded-full bg-line/50">
+                  <span
+                    className="block h-full rounded-full transition-all duration-1000"
+                    style={{
+                      width: `${Math.min(100, Math.max(0, f.raw ?? 0))}%`,
+                      background: 'currentColor',
+                    }}
+                  />
+                </span>
+              ) : null}
             </span>
           ))}
         </span>

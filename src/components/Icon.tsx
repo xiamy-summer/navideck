@@ -31,6 +31,9 @@ function ensurePack() {
 
 const status = new Map<string, boolean>();
 
+/** Emoji 单字符（含代理对/变体选择符）：以文字直接渲染，不走 Iconify */
+const EMOJI_RE = /^(\p{Extended_Pictographic}|\p{Emoji_Presentation})(\uFE0F|\u200D[\p{Extended_Pictographic}\uFE0F]*)*$/u;
+
 interface Props {
   icon?: string | null;
   size?: number;
@@ -49,6 +52,8 @@ export function Icon({ icon, size = 24, className, title }: Props) {
   // 图片地址不走 Iconify，直接按 <img> 渲染：
   // 外链 http(s)、内嵌 data:image、以及本站上传的 /api/files/<hash>.<ext>
   const isImage = !!icon && /^(https?:\/\/|data:image\/|\/api\/files\/)/i.test(icon);
+  // Emoji（如 🍿/🔍）以文字渲染，颜色固定、不随 currentColor
+  const isEmoji = !!icon && EMOJI_RE.test(icon);
   const [packReady, setPackReady] = useState(false);
   const [onlineFailed, setOnlineFailed] = useState(false);
 
@@ -107,6 +112,29 @@ export function Icon({ icon, size = 24, className, title }: Props) {
           display: 'inline-block',
         }}
       />
+    );
+  }
+
+  // 0.5) Emoji → 直接文字渲染（比图片更锐利，随系统 emoji 字体）
+  if (isEmoji) {
+    return (
+      <span
+        className={className}
+        role={title ? 'img' : undefined}
+        aria-label={title || undefined}
+        style={{
+          width: size,
+          height: size,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: Math.round(size * 0.8),
+          lineHeight: 1,
+          flex: 'none',
+        }}
+      >
+        {icon}
+      </span>
     );
   }
 

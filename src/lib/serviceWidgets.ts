@@ -4,10 +4,14 @@ export interface ServiceField {
   label: string;
   /** JSON 取值路径，支持 a.b.0.c 与数组 length */
   path: string;
+  /** 字段图标（Iconify 名），Homepage 风格每字段一图标 */
+  icon?: string;
   suffix?: string;
   /** 数值乘数，用于单位换算（如字节/秒转 MB/s 填 1/1048576） */
   scale?: number;
   digits?: number;
+  /** 是否渲染为进度条（数值按 0-100 百分比） */
+  bar?: boolean;
 }
 
 export interface ServiceEndpoint {
@@ -55,9 +59,9 @@ export const TEMPLATES: ServiceTemplate[] = [
     keyHint: 'Settings → General → API Key',
     needsKey: true,
     endpoints: [
-      { path: '/api/v3/series', fields: [{ label: 'series', path: 'length' }] },
-      { path: '/api/v3/wanted/missing?pageSize=1', fields: [{ label: 'missing', path: 'totalRecords' }] },
-      { path: '/api/v3/queue?pageSize=1', fields: [{ label: 'queued', path: 'totalRecords' }] },
+      { path: '/api/v3/series', fields: [{ label: 'series', path: 'length', icon: 'mdi:television-play' }] },
+      { path: '/api/v3/wanted/missing?pageSize=1', fields: [{ label: 'missing', path: 'totalRecords', icon: 'mdi:alert-circle-outline' }] },
+      { path: '/api/v3/queue?pageSize=1', fields: [{ label: 'queued', path: 'totalRecords', icon: 'mdi:download-circle-outline' }] },
     ],
   },
   {
@@ -68,9 +72,9 @@ export const TEMPLATES: ServiceTemplate[] = [
     keyHint: 'Settings → General → API Key',
     needsKey: true,
     endpoints: [
-      { path: '/api/v3/movie', fields: [{ label: 'movies', path: 'length' }] },
-      { path: '/api/v3/wanted/missing?pageSize=1', fields: [{ label: 'missing', path: 'totalRecords' }] },
-      { path: '/api/v3/queue?pageSize=1', fields: [{ label: 'queued', path: 'totalRecords' }] },
+      { path: '/api/v3/movie', fields: [{ label: 'movies', path: 'length', icon: 'mdi:movie-open-outline' }] },
+      { path: '/api/v3/wanted/missing?pageSize=1', fields: [{ label: 'missing', path: 'totalRecords', icon: 'mdi:alert-circle-outline' }] },
+      { path: '/api/v3/queue?pageSize=1', fields: [{ label: 'queued', path: 'totalRecords', icon: 'mdi:download-circle-outline' }] },
     ],
   },
   {
@@ -81,8 +85,8 @@ export const TEMPLATES: ServiceTemplate[] = [
     keyHint: 'Settings → General → API Key',
     needsKey: true,
     endpoints: [
-      { path: '/api/v1/artist', fields: [{ label: 'artists', path: 'length' }] },
-      { path: '/api/v1/wanted/missing?pageSize=1', fields: [{ label: 'missing', path: 'totalRecords' }] },
+      { path: '/api/v1/artist', fields: [{ label: 'artists', path: 'length', icon: 'mdi:account-music-outline' }] },
+      { path: '/api/v1/wanted/missing?pageSize=1', fields: [{ label: 'missing', path: 'totalRecords', icon: 'mdi:alert-circle-outline' }] },
     ],
   },
   {
@@ -93,8 +97,8 @@ export const TEMPLATES: ServiceTemplate[] = [
     keyHint: 'Settings → General → API Key',
     needsKey: true,
     endpoints: [
-      { path: '/api/series', fields: [{ label: 'series', path: 'length' }] },
-      { path: '/api/movies', fields: [{ label: 'movies', path: 'length' }] },
+      { path: '/api/series', fields: [{ label: 'series', path: 'length', icon: 'mdi:television-play' }] },
+      { path: '/api/movies', fields: [{ label: 'movies', path: 'length', icon: 'mdi:movie-open-outline' }] },
     ],
   },
   {
@@ -104,12 +108,12 @@ export const TEMPLATES: ServiceTemplate[] = [
     keyHint: 'WebUI 用户名:密码，如 admin:123456',
     needsKey: true,
     endpoints: [
-      { path: '/api/v2/torrents/info', fields: [{ label: 'torrents', path: 'length' }] },
+      { path: '/api/v2/torrents/info', fields: [{ label: 'torrents', path: 'length', icon: 'mdi:download-multiple-outline' }] },
       {
         path: '/api/v2/transfer/info',
         fields: [
-          { label: 'dl', path: 'dl_info_speed', scale: 1 / 1048576, digits: 1, suffix: ' MB/s' },
-          { label: 'up', path: 'up_info_speed', scale: 1 / 1048576, digits: 1, suffix: ' MB/s' },
+          { label: 'dl', path: 'dl_info_speed', scale: 1 / 1048576, digits: 1, suffix: ' MB/s', icon: 'mdi:arrow-down-bold' },
+          { label: 'up', path: 'up_info_speed', scale: 1 / 1048576, digits: 1, suffix: ' MB/s', icon: 'mdi:arrow-up-bold' },
         ],
       },
     ],
@@ -126,7 +130,7 @@ export const TEMPLATES: ServiceTemplate[] = [
         method: 'POST',
         body: '{"method":"session-stats"}',
         fields: [
-          { label: 'torrents', path: 'arguments.torrentCount' },
+          { label: 'torrents', path: 'arguments.torrentCount', icon: 'mdi:download-multiple-outline' },
           {
             label: 'dl',
             path: 'arguments.downloadSpeed',
@@ -145,8 +149,8 @@ export const TEMPLATES: ServiceTemplate[] = [
     keyHint: 'X-Plex-Token，可在媒体项 XML 链接中找到',
     needsKey: true,
     endpoints: [
-      { path: '/library/sections', fields: [{ label: 'libraries', path: 'MediaContainer.size' }] },
-      { path: '/status/sessions', fields: [{ label: 'playing', path: 'MediaContainer.size' }] },
+      { path: '/library/sections', fields: [{ label: 'libraries', path: 'MediaContainer.size', icon: 'mdi:folder-multiple-outline' }] },
+      { path: '/status/sessions', fields: [{ label: 'playing', path: 'MediaContainer.size', icon: 'mdi:play-circle-outline' }] },
     ],
   },
   {
@@ -158,9 +162,9 @@ export const TEMPLATES: ServiceTemplate[] = [
     endpoints: [
       {
         path: '/Items?Recursive=true&Limit=1',
-        fields: [{ label: 'items', path: 'TotalRecordCount' }],
+        fields: [{ label: 'items', path: 'TotalRecordCount', icon: 'mdi:movie-open-outline' }],
       },
-      { path: '/Sessions', fields: [{ label: 'playing', path: 'length' }] },
+      { path: '/Sessions', fields: [{ label: 'playing', path: 'length', icon: 'mdi:play-circle-outline' }] },
     ],
   },
   {
@@ -173,9 +177,9 @@ export const TEMPLATES: ServiceTemplate[] = [
     endpoints: [
       {
         path: '/emby/Items?Recursive=true&Limit=1',
-        fields: [{ label: 'items', path: 'TotalRecordCount' }],
+        fields: [{ label: 'items', path: 'TotalRecordCount', icon: 'mdi:movie-open-outline' }],
       },
-      { path: '/emby/Sessions', fields: [{ label: 'playing', path: 'length' }] },
+      { path: '/emby/Sessions', fields: [{ label: 'playing', path: 'length', icon: 'mdi:play-circle-outline' }] },
     ],
   },
 
@@ -186,7 +190,7 @@ export const TEMPLATES: ServiceTemplate[] = [
     auth: 'portainer',
     keyHint: 'My Account → Access tokens',
     needsKey: true,
-    endpoints: [{ path: '/api/endpoints', fields: [{ label: 'endpoints', path: 'length' }] }],
+    endpoints: [{ path: '/api/endpoints', fields: [{ label: 'endpoints', path: 'length', icon: 'mdi:server-outline' }] }],
   },
   {
     id: 'proxmox',
@@ -195,8 +199,8 @@ export const TEMPLATES: ServiceTemplate[] = [
     keyHint: 'API Token，形如 user@pam!name=uuid-secret',
     needsKey: true,
     endpoints: [
-      { path: '/api2/json/nodes', fields: [{ label: 'nodes', path: 'data.length' }] },
-      { path: '/api2/json/cluster/resources?type=vm', fields: [{ label: 'guests', path: 'data.length' }] },
+      { path: '/api2/json/nodes', fields: [{ label: 'nodes', path: 'data.length', icon: 'mdi:server-network' }] },
+      { path: '/api2/json/cluster/resources?type=vm', fields: [{ label: 'guests', path: 'data.length', icon: 'mdi:desktop-classic' }] },
     ],
   },
   {
@@ -208,7 +212,7 @@ export const TEMPLATES: ServiceTemplate[] = [
     endpoints: [
       {
         path: '/api/status-page/heartbeat/{key}',
-        fields: [{ label: 'uptime24h', path: 'uptimeList.86400', digits: 2, suffix: '%' }],
+        fields: [{ label: 'uptime24h', path: 'uptimeList.86400', digits: 2, suffix: '%', icon: 'mdi:chart-timeline-variant', bar: true }],
       },
     ],
   },
@@ -219,8 +223,8 @@ export const TEMPLATES: ServiceTemplate[] = [
     keyHint: '无需密钥（无鉴权部署）',
     needsKey: false,
     endpoints: [
-      { path: '/api/summary', fields: [{ label: 'passed', path: 'data.summary.passed' }] },
-      { path: '/api/summary', fields: [{ label: 'failed', path: 'data.summary.failed' }] },
+      { path: '/api/summary', fields: [{ label: 'passed', path: 'data.summary.passed', icon: 'mdi:check-circle-outline' }] },
+      { path: '/api/summary', fields: [{ label: 'failed', path: 'data.summary.failed', icon: 'mdi:close-circle-outline' }] },
     ],
   },
   {
@@ -230,8 +234,8 @@ export const TEMPLATES: ServiceTemplate[] = [
     keyHint: '无需密钥（无鉴权部署）',
     needsKey: false,
     endpoints: [
-      { path: '/api/3/cpu', fields: [{ label: 'cpu', path: 'total', digits: 0, suffix: '%' }] },
-      { path: '/api/3/mem', fields: [{ label: 'mem', path: 'percent', digits: 0, suffix: '%' }] },
+      { path: '/api/3/cpu', fields: [{ label: 'cpu', path: 'total', digits: 0, suffix: '%', icon: 'mdi:cpu-64-bit', bar: true }] },
+      { path: '/api/3/mem', fields: [{ label: 'mem', path: 'percent', digits: 0, suffix: '%', icon: 'mdi:memory', bar: true }] },
     ],
   },
 ];
@@ -263,23 +267,38 @@ export function pick(obj: unknown, path: string): unknown {
   return cur;
 }
 
-function fmtValue(value: unknown, field: ServiceField): string {
-  if (value === undefined || value === null || value === '') return '-';
+function fmtValue(value: unknown, field: ServiceField): { text: string; raw?: number } {
+  if (value === undefined || value === null || value === '') return { text: '-' };
   const numeric = typeof value === 'number' ? value : Number(value);
-  if (typeof numeric === 'number' && Number.isFinite(numeric) && typeof field.scale === 'number') {
+  const isNum = typeof numeric === 'number' && Number.isFinite(numeric);
+  if (isNum && typeof field.scale === 'number') {
     const scaled = numeric * field.scale;
     const digits = field.digits ?? (Math.abs(scaled) >= 100 ? 0 : 1);
-    return `${scaled.toFixed(digits)}${field.suffix ?? ''}`;
+    return { text: `${fmtInt(scaled, digits)}${field.suffix ?? ''}`, raw: scaled };
   }
-  if (typeof numeric === 'number' && Number.isFinite(numeric) && field.digits !== undefined) {
-    return `${numeric.toFixed(field.digits)}${field.suffix ?? ''}`;
+  if (isNum && field.digits !== undefined) {
+    return { text: `${fmtInt(numeric, field.digits)}${field.suffix ?? ''}`, raw: numeric };
   }
-  return `${value}${field.suffix ?? ''}`;
+  if (isNum) {
+    return { text: `${fmtInt(numeric, Math.abs(numeric) >= 100 ? 0 : 1)}${field.suffix ?? ''}`, raw: numeric };
+  }
+  return { text: `${value}${field.suffix ?? ''}` };
+}
+
+/** 千分位 + 小数位数（Homepage 风格的紧凑数字） */
+function fmtInt(n: number, digits: number): string {
+  return n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: digits });
 }
 
 export interface ProbeField {
   label: string;
   value: string;
+  /** 字段图标（模板 icon 或自定义 API 无则空） */
+  icon?: string;
+  /** 原始数值（供进度条渲染） */
+  raw?: number;
+  /** 是否进度条 */
+  bar?: boolean;
 }
 
 export interface ProbeResult {
@@ -441,10 +460,17 @@ export async function probeService(cfg: ItemService, useCache = true): Promise<P
         body: ep.body,
       });
       for (const field of ep.fields) {
-        fields.push({ label: field.label, value: fmtValue(pick(data, field.path), field) });
+        const formatted = fmtValue(pick(data, field.path), field);
+        fields.push({
+          label: field.label,
+          value: formatted.text,
+          icon: field.icon,
+          raw: formatted.raw,
+          bar: field.bar,
+        });
       }
     } catch (e) {
-      for (const field of ep.fields) fields.push({ label: field.label, value: '-' });
+      for (const field of ep.fields) fields.push({ label: field.label, value: '-', icon: field.icon, bar: field.bar });
       errors.push(e instanceof Error ? e.message : '请求失败');
     }
   });

@@ -1,9 +1,11 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Icon } from './Icon';
 import type { Item, Settings } from '@/lib/types';
 import { useI18n } from '@/i18n';
+
+const ENGINE_STORAGE_KEY = 'navideck-search-engine';
 
 interface Props {
   settings: Settings;
@@ -18,6 +20,27 @@ export function SearchBar({ settings, items, onOpenItem }: Props) {
   const [engineOpen, setEngineOpen] = useState(false);
   const engines = settings.searchEngines?.length ? settings.searchEngines : [];
   const engine = engines.find((e) => e.id === engineId) ?? engines[0];
+
+  // 记住上次手动切换的引擎（刷新/下次访问仍用用户最后选的）
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(ENGINE_STORAGE_KEY);
+      if (saved && engines.some((e) => e.id === saved)) setEngineId(saved);
+    } catch {
+      /* 隐私模式忽略 */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [engines]);
+
+  const pickEngine = (id: string) => {
+    setEngineId(id);
+    setEngineOpen(false);
+    try {
+      localStorage.setItem(ENGINE_STORAGE_KEY, id);
+    } catch {
+      /* 忽略 */
+    }
+  };
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();

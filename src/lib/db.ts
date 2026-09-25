@@ -117,6 +117,9 @@ function migrate(db: Database.Database) {
   if (!itemCols.some((c) => c.name === 'container')) {
     db.exec('ALTER TABLE items ADD COLUMN container TEXT');
   }
+  if (!itemCols.some((c) => c.name === 'cardSize')) {
+    db.exec("ALTER TABLE items ADD COLUMN cardSize TEXT");
+  }
 
   // 旧库升级：为已有 users 表补上弱密码标记列
   const userCols = db.prepare('PRAGMA table_info(users)').all() as Array<{ name: string }>;
@@ -353,8 +356,8 @@ export function createItem(
     .get(input.groupId) as { s: number };
   const info = db
     .prepare(
-      `INSERT INTO items (groupId, userId, title, icon, urlLan, urlWan, desc, openMode, color, sort, service, container, createdAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO items (groupId, userId, title, icon, urlLan, urlWan, desc, openMode, color, sort, service, container, cardSize, createdAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       input.groupId,
@@ -369,6 +372,7 @@ export function createItem(
       next.s,
       input.service ?? null,
       input.container ?? null,
+      input.cardSize ?? null,
       Date.now(),
     );
   return db.prepare('SELECT * FROM items WHERE id = ?').get(info.lastInsertRowid) as Item;
@@ -391,6 +395,7 @@ export function updateItem(
       | 'groupId'
       | 'service'
       | 'container'
+      | 'cardSize'
     >
   >,
 ): Item | null {
@@ -408,6 +413,7 @@ export function updateItem(
     groupId: 'groupId',
     service: 'service',
     container: 'container',
+    cardSize: 'cardSize',
   };
   const sets: string[] = [];
   const args: unknown[] = [];
