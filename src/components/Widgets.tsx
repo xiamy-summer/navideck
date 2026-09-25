@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, type DockerListResult, type MetricsResult } from '@/lib/api-client';
 import { renderMarkdown } from '@/lib/markdown';
 import { Icon } from './Icon';
@@ -10,6 +10,8 @@ import type { Settings } from '@/lib/types';
 
 interface Props {
   settings: Settings;
+  /** 便签保存回调（首页直接编辑用）；不传则便签为只读 */
+  onSaveNotes?: (text: string) => Promise<void> | void;
 }
 
 function fmtRate(bytes: number): string {
@@ -459,30 +461,113 @@ function RssCard({ feeds, max, refreshSec }: { feeds: string[]; max: number; ref
   );
 }
 
-/* ----------------------------- 便签卡片 ----------------------------- */
-function NotesCard({ text }: { text: string }) {
+/* ----------------------------- 便签卡片（可直接在首页编辑） ----------------------------- */
+function NotesCard({ text, onSave }: { text: string; onSave?: (text: string) => Promise<void> | void }) {
   const { t } = useI18n();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(text);
+  const [saving, setSaving] = useState(false);
+  const areaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // 非编辑态时跟随外部内容（例如在设置中心改过）
+  useEffect(() => {
+    if (!editing) setDraft(text);
+  }, [text, editing]);
+
+  useEffect(() => {
+    if (editing) areaRef.current?.focus();
+  }, [editing]);
+
+  const commit = async () => {
+    if (!onSave || saving) return;
+    setSaving(true);
+    try {
+      await onSave(draft);
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const cancel = () => {
+    setDraft(text);
+    setEditing(false);
+  };
+
   return (
-    <div className="card widget p-4">
-      <WidgetHead icon="mdi:file-document-outline" title={t('widget.notes')} />
-      {!text.trim() ? (
-        <WidgetEmpty icon="mdi:file-document-outline" text={t('widget.notesEmpty')} />
+    <div className={`card widget p-4 ${editing ? 'sm:col-span-2' : ''}`}>
+      <WidgetHead icon="mdi:file-document-outline" title={t('widget.notes')}>
+        {editing ? (
+          <span className="ml-auto flex flex-none items-center gap-1.5">
+            <button className="btn px-2 py-0.5 text-[11px]" onClick={cancel} disabled={saving}>
+              {t('common.cancel')}
+            </button>
+            <button
+              className="btn btn-primary px-2 py-0.5 text-[11px]"
+              onClick={() => void commit()}
+              disabled={saving}
+            >
+              {saving ? t('common.saving') : t('common.save')}
+            </button>
+          </span>
+        ) : onSave ? (
+          <button className="widget-head-btn" onClick={() => setEditing(true)} title={t('widget.notesEdit')}>
+            <Icon icon="mdi:pencil-outline" size={14} title={t('widget.notesEdit')} />
+          </button>
+        ) : null}
+      </WidgetHead>
+
+      {editing ? (
+        <textarea
+          ref={areaRef}
+          className="field widget-notes-area"
+          placeholder={t('widget.notesPlaceholder')}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.preventDefault();
+              cancel();
+            } else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+              e.preventDefault();
+              void commit();
+            }
+          }}
+        />
+      ) : !text.trim() ? (
+        <button
+          type="button"
+          className="widget-empty w-full"
+          data-clickable={onSave ? '' : undefined}
+          disabled={!onSave}
+          onClick={() => {
+            if (onSave) setEditing(true);
+          }}
+        >
+          <span className="widget-empty-icon">
+            <Icon icon="mdi:file-document-outline" size={20} title={t('widget.notes')} />
+          </span>
+          <p className="widget-empty-text max-w-[210px]">{t('widget.notesEmpty')}</p>
+        </button>
       ) : (
-        <div className="md-body text-[12px] leading-relaxed text-ink/90" dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }} />
+        <div
+          className="md-body text-[12px] leading-relaxed text-ink/90"
+          dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }}
+        />
       )}
     </div>
   );
 }
 
 /* ----------------------------- 容器 ----------------------------- */
-export function Widgets({ settings }: Props) {
+export function Widgets({ settings, onSaveNotes }: Props) {
   const cards: React.ReactNode[] = [];
   if (settings.widgetSystem) cards.push(<SystemCard key="system" refreshSec={settings.widgetRefresh} />);
   if (settings.widgetDocker && settings.dockerEnabled) cards.push(<DockerCard key="docker" refreshSec={settings.widgetRefresh} />);
   if (settings.widgetClock) cards.push(<ClockCard key="clock" />);
   if (settings.widgetWeather) cards.push(<WeatherCard key="weather" city={settings.widgetWeatherCity} refreshSec={settings.widgetRefresh} />);
   if (settings.widgetRss) cards.push(<RssCard key="rss" feeds={settings.widgetRssFeeds} max={settings.widgetRssMax} refreshSec={settings.widgetRefresh} />);
-  if (settings.widgetNotes) cards.push(<NotesCard key="notes" text={settings.widgetNotesText} />);
+  if (settings.widgetNotes) cards.push(<NotesCard key="notes" text={settings.widgetNotesText} onSave={onSaveNotes} />);
 
   if (!cards.length) return null;
 

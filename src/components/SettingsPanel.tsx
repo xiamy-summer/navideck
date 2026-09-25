@@ -629,7 +629,7 @@ function AppearanceTab({
         <Row label={t('appearance.widgetNotes')}>
           <Switch value={settings.widgetNotes} onChange={(v) => onSave({ widgetNotes: v })} />
         </Row>
-        <Row label={t('appearance.widgetNotesText')}>
+        <Row label={t('appearance.widgetNotesText')} hint={t('appearance.widgetNotesTextHint')}>
           <textarea
             className="field h-28 w-72 resize-y text-[12px]"
             placeholder={"# 便签\n- 支持 **Markdown**\n- 链接 [NaviDeck](https://example.com)"}

@@ -1,5 +1,6 @@
 export const enUS: Record<string, string> = {
   'common.save': 'Save',
+  'common.saving': 'Saving…',
   'common.cancel': 'Cancel',
   'common.delete': 'Delete',
   'common.edit': 'Edit',
@@ -476,6 +477,7 @@ export const enUS: Record<string, string> = {
   'appearance.widgetRssMax': 'RSS max items',
   'appearance.widgetNotes': 'Notes widget',
   'appearance.widgetNotesText': 'Notes content',
+  'appearance.widgetNotesTextHint': 'You can also edit it via the pencil on the home page card',
 
   'widget.clock': 'Clock',
   'widget.weather': 'Weather',
@@ -494,7 +496,9 @@ export const enUS: Record<string, string> = {
   'widget.rss': 'RSS',
   'widget.rssNoFeed': 'Add feeds in Appearance settings',
   'widget.notes': 'Notes',
-  'widget.notesEmpty': 'Write notes in Appearance settings',
+  'widget.notesEmpty': 'Click to start writing',
+  'widget.notesEdit': 'Edit note',
+  'widget.notesPlaceholder': 'Write something… Markdown supported (Ctrl/⌘ + Enter to save)',
 
   'login.sso': 'Sign in with SSO',
 };

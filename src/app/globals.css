@@ -590,6 +590,54 @@ body[data-has-bg].dark .settings-section {
   color: rgb(var(--muted));
 }
 
+/* 头部右侧小图标按钮（如便签的编辑入口） */
+.widget-head-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  margin-left: auto;
+  border-radius: 8px;
+  color: rgb(var(--muted));
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.widget-head-btn:hover {
+  background: rgb(var(--brand) / 0.13);
+  color: rgb(var(--brand));
+}
+.widget-head-btn:focus-visible {
+  outline: 2px solid rgb(var(--brand) / 0.5);
+  outline-offset: 1px;
+}
+
+/* 可点击的空态（便签：点一下直接开始写） */
+.widget-empty[data-clickable] {
+  cursor: text;
+  border-radius: 12px;
+  transition: background 0.15s ease;
+}
+.widget-empty[data-clickable]:hover {
+  background: rgb(var(--brand) / 0.07);
+}
+.widget-empty[data-clickable]:hover .widget-empty-icon {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+.widget-empty-icon {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+/* 便签编辑态 */
+.widget-notes-area {
+  width: 100%;
+  min-height: 118px;
+  resize: vertical;
+  font-size: 12.5px;
+  line-height: 1.65;
+}
+
 /* 空态 / 加载态：统一的图标块 + 提示文案 */
 .widget-empty {
   display: flex;

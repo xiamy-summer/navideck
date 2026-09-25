@@ -1,5 +1,6 @@
 export const zhCN: Record<string, string> = {
   'common.save': '保存',
+  'common.saving': '保存中…',
   'common.cancel': '取消',
   'common.delete': '删除',
   'common.edit': '编辑',
@@ -476,6 +477,7 @@ export const zhCN: Record<string, string> = {
   'appearance.widgetRssMax': 'RSS 最大条数',
   'appearance.widgetNotes': '便签小组件',
   'appearance.widgetNotesText': '便签内容',
+  'appearance.widgetNotesTextHint': '也可以直接点首页便签卡片上的铅笔编辑',
 
   'widget.clock': '时钟',
   'widget.weather': '天气',
@@ -494,7 +496,9 @@ export const zhCN: Record<string, string> = {
   'widget.rss': 'RSS',
   'widget.rssNoFeed': '在外观设置中添加订阅源',
   'widget.notes': '便签',
-  'widget.notesEmpty': '在外观设置中填写便签内容',
+  'widget.notesEmpty': '点击此处开始写便签',
+  'widget.notesEdit': '编辑便签',
+  'widget.notesPlaceholder': '写点什么…支持 Markdown（Ctrl/⌘ + Enter 保存）',
 
   'login.sso': '使用单点登录',
 };

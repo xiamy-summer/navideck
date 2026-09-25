@@ -264,6 +264,21 @@ export function HomeView({
     }
   };
 
+  /** 便签直接在首页卡片上编辑：保存后立即用返回的设置刷新本地状态 */
+  const saveNotes = useCallback(
+    async (text: string) => {
+      try {
+        const saved = await api.saveSettings({ widgetNotesText: text }, targetId ?? undefined);
+        setSettings(saved);
+        setToast(t('common.saved'));
+      } catch (err) {
+        setToast(err instanceof Error ? err.message : t('common.saveFailed'));
+        throw err;
+      }
+    },
+    [targetId, t],
+  );
+
   return (
     <div className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-8">
       <header className="mb-6">
@@ -391,7 +406,7 @@ export function HomeView({
       ) : null}
 
       {settings.widgetsEnabled && settings.widgetPosition === 'top' ? (
-        <Widgets settings={settings} />
+        <Widgets settings={settings} onSaveNotes={user ? saveNotes : undefined} />
       ) : null}
 
       {editMode && user ? (
@@ -470,7 +485,7 @@ export function HomeView({
 
       {settings.widgetsEnabled && settings.widgetPosition === 'bottom' ? (
         <div className="mt-6">
-          <Widgets settings={settings} />
+          <Widgets settings={settings} onSaveNotes={user ? saveNotes : undefined} />
         </div>
       ) : null}
 
