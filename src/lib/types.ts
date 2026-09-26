@@ -69,6 +69,18 @@ export interface ItemService {
   };
 }
 
+/** 操作审计日志条目 */
+export interface AuditLog {
+  id: number;
+  userId: number;
+  username: string;
+  action: string;
+  target: string | null;
+  detail: string | null;
+  ip: string | null;
+  createdAt: number;
+}
+
 export interface SearchEngine {
   id: string;
   name: string;

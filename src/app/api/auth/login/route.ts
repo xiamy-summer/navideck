@@ -4,6 +4,7 @@ import { signToken, setSessionCookie } from '@/lib/auth';
 import { fail, handle, ok, readJson } from '@/lib/api';
 import { getUserById, updateUser } from '@/lib/db';
 import { isWeakPassword } from '@/lib/weakPassword';
+import { audit } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,8 +31,10 @@ export async function POST(req: Request) {
 
     const row = getAuthUser(username);
     if (!row || row.role === 'guest' || !verifyPassword(password, row.passwordHash)) {
+      audit(req, { action: 'auth.loginFailed', target: username, ip });
       return fail('用户名或密码错误', 401);
     }
+    audit(req, { userId: row.id, username: row.username, action: 'auth.login', ip });
     // 登录成功时才能看到明文密码，就地判定强弱并打标记（不阻断登录，仅前端提示）
     const weak = isWeakPassword(password, process.env.DEFAULT_ADMIN_PASSWORD);
     if (weak !== (row.mustChangePassword === 1)) {

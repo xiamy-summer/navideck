@@ -107,6 +107,18 @@ function migrate(db: Database.Database) {
     );
     CREATE INDEX IF NOT EXISTS idx_metric_samples_t ON metric_samples(t);
     CREATE INDEX IF NOT EXISTS idx_metric_alerts_t ON metric_alerts(t);
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      userId INTEGER NOT NULL DEFAULT 0,
+      username TEXT NOT NULL DEFAULT '',
+      action TEXT NOT NULL,
+      target TEXT,
+      detail TEXT,
+      ip TEXT,
+      createdAt INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(createdAt DESC);
+    CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_logs(userId);
   `);
 
   // 旧库升级：为已有 items 表补上服务集成与容器关联列

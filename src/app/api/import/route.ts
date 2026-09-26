@@ -1,5 +1,6 @@
 import { createGroup, createItem, deleteGroup, listGroups, saveUserSettings } from '@/lib/db';
 import { fail, handle, ok, readJson, requireWrite, resolveTarget } from '@/lib/api';
+import { audit } from '@/lib/audit';
 import type { BackupPayload, OpenMode, Settings } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -40,6 +41,12 @@ export async function POST(req: Request) {
         itemCount += 1;
       }
     }
+    audit(req, {
+      userId: target.actor?.id ?? 0,
+      username: target.actor?.username ?? '',
+      action: 'data.import',
+      detail: `${mode === 'replace' ? '覆盖' : '追加'}：${groupCount} 个分组 / ${itemCount} 个站点`,
+    });
     return ok({ success: true, groupCount, itemCount });
   });
 }

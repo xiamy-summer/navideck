@@ -6,7 +6,7 @@ import { api, type SystemStatus } from '@/lib/api-client';
 import { Icon } from './Icon';
 import { DockerPanel } from './DockerPanel';
 import { MetricsPanel } from './MetricsPanel';
-import type { Role, SearchEngine, Settings, UploadedFile, User } from '@/lib/types';
+import type { AuditLog, Role, SearchEngine, Settings, UploadedFile, User } from '@/lib/types';
 import { useI18n, LANGS, type Lang } from '@/i18n';
 import { APP_VERSION } from '@/lib/version';
 import { THEME_PRESETS } from '@/lib/theme';
@@ -21,6 +21,7 @@ type Tab =
   | 'docker'
   | 'metrics'
   | 'oidc'
+  | 'audit'
   | 'about';
 
 const TABS: Array<{ id: Tab; icon: string; adminOnly?: boolean }> = [
@@ -33,7 +34,32 @@ const TABS: Array<{ id: Tab; icon: string; adminOnly?: boolean }> = [
   { id: 'docker', icon: 'mdi:docker', adminOnly: true },
   { id: 'metrics', icon: 'mdi:chart-line' },
   { id: 'oidc', icon: 'mdi:shield-key-outline', adminOnly: true },
+  { id: 'audit', icon: 'mdi:shield-check-outline', adminOnly: true },
   { id: 'about', icon: 'mdi:information-outline' },
+];
+
+/** 可筛选的审计操作类型（与后端埋点的 action 一致） */
+const AUDIT_ACTIONS = [
+  'auth.login',
+  'auth.loginFailed',
+  'auth.logout',
+  'auth.password',
+  'item.create',
+  'item.update',
+  'item.delete',
+  'item.reorder',
+  'group.create',
+  'group.update',
+  'group.delete',
+  'group.reorder',
+  'settings.update',
+  'data.import',
+  'backup.restore',
+  'docker.action',
+  'user.create',
+  'user.update',
+  'user.delete',
+  'audit.clear',
 ];
 
 interface Props {
@@ -193,6 +219,7 @@ export function SettingsPanel({ user, initialSettings, users: initialUsers }: Pr
             </div>
           ) : null}
           {tab === 'oidc' && isAdmin ? <OidcTab settings={settings} onSave={save} isGlobal={isGlobal} /> : null}
+          {tab === 'audit' && isAdmin ? <AuditTab toast={setToast} /> : null}
           {tab === 'about' ? <AboutTab /> : null}
         </div>
       </div>
@@ -1746,6 +1773,126 @@ function OidcTab({
           ) : null}
         </div>
       </Section>
+    </div>
+  );
+}
+
+/* ----------------------------- 操作审计日志（仅管理员） ----------------------------- */
+function AuditTab({ toast }: { toast: (message: string) => void }) {
+  const { t, lang } = useI18n();
+  const [rows, setRows] = useState<AuditLog[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [action, setAction] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(
+    async (nextPage: number) => {
+      setLoading(true);
+      try {
+        const res = await api.auditList({ page: nextPage, pageSize: 20, action: action || undefined });
+        setRows(res.rows);
+        setPage(res.page);
+        setPageCount(res.pageCount);
+        setTotal(res.total);
+      } catch {
+        toast(t('audit.loadFailed'));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [action, toast, t],
+  );
+
+  useEffect(() => {
+    void load(1);
+  }, [load]);
+
+  const clearAll = async () => {
+    if (!window.confirm(t('audit.clearConfirm'))) return;
+    try {
+      const res = await api.auditClear();
+      toast(t('audit.cleared', { n: res.removed }));
+      await load(1);
+    } catch (err) {
+      toast(err instanceof Error ? err.message : t('common.saveFailed'));
+    }
+  };
+
+  const timeText = (ts: number) =>
+    new Date(ts).toLocaleString(lang === 'zh-CN' ? 'zh-CN' : 'en-US', { hour12: false });
+
+  return (
+    <div className="card p-5">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div className="min-w-0">
+          <div className="text-[15px] font-medium">{t('audit.title')}</div>
+          <div className="text-[11px] text-muted">{t('audit.hint')}</div>
+        </div>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <select className="field w-36" value={action} onChange={(e) => setAction(e.target.value)}>
+            <option value="">{t('audit.filterAll')}</option>
+            {AUDIT_ACTIONS.map((a) => (
+              <option key={a} value={a}>
+                {t(`audit.act.${a}`)}
+              </option>
+            ))}
+          </select>
+          <button className="btn" onClick={() => void clearAll()} disabled={!total}>
+            {t('audit.clear')}
+          </button>
+        </div>
+      </div>
+
+      {rows.length ? (
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-[12px]">
+            <thead>
+              <tr className="text-left text-muted">
+                <th className="whitespace-nowrap py-1.5 pr-3 font-normal">{t('audit.time')}</th>
+                <th className="whitespace-nowrap py-1.5 pr-3 font-normal">{t('audit.user')}</th>
+                <th className="whitespace-nowrap py-1.5 pr-3 font-normal">{t('audit.action')}</th>
+                <th className="py-1.5 pr-3 font-normal">{t('audit.target')}</th>
+                <th className="whitespace-nowrap py-1.5 pr-3 font-normal">{t('audit.detail')}</th>
+                <th className="whitespace-nowrap py-1.5 font-normal">{t('audit.ip')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.id} className="border-t border-line align-top">
+                  <td className="whitespace-nowrap py-1.5 pr-3 text-muted">{timeText(r.createdAt)}</td>
+                  <td className="whitespace-nowrap py-1.5 pr-3">{r.username || t('audit.system')}</td>
+                  <td className="whitespace-nowrap py-1.5 pr-3">{t(`audit.act.${r.action}`)}</td>
+                  <td className="max-w-[220px] break-all py-1.5 pr-3">{r.target ?? '—'}</td>
+                  <td className="max-w-[240px] break-all py-1.5 pr-3 text-muted">{r.detail ?? '—'}</td>
+                  <td className="whitespace-nowrap py-1.5 text-muted">{r.ip ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="py-8 text-center text-[12px] text-muted">
+          {loading ? t('common.loading') : t('audit.empty')}
+        </div>
+      )}
+
+      {pageCount > 1 ? (
+        <div className="mt-3 flex items-center justify-between">
+          <span className="text-[11px] text-muted">
+            {t('audit.pageInfo', { page, total: pageCount, n: total })}
+          </span>
+          <span className="flex gap-2">
+            <button className="btn" disabled={page <= 1 || loading} onClick={() => void load(page - 1)}>
+              {t('audit.prev')}
+            </button>
+            <button className="btn" disabled={page >= pageCount || loading} onClick={() => void load(page + 1)}>
+              {t('audit.next')}
+            </button>
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }

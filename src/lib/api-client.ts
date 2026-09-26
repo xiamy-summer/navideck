@@ -1,4 +1,14 @@
-import type { Group, Item, ItemService, OpenMode, Role, Settings, UploadedFile, User } from './types';
+import type {
+  AuditLog,
+  Group,
+  Item,
+  ItemService,
+  OpenMode,
+  Role,
+  Settings,
+  UploadedFile,
+  User,
+} from './types';
 // 仅类型导入，避免把服务端模块打进前端包
 import type { ProbeResult as ServiceProbe, ServiceTemplate as ServiceTemplateOption } from './serviceWidgets';
 
@@ -74,6 +84,14 @@ export interface DockerListResult {
   message?: string;
   containers: DockerContainer[];
   info?: { version?: string; containers: number; running: number; stopped: number } | null;
+}
+
+export interface AuditListResult {
+  rows: AuditLog[];
+  total: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
 }
 
 export interface MetricPoint {
@@ -218,6 +236,19 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(id === undefined ? { all: true } : { id }),
     }),
+
+  /** 操作审计日志（仅管理员）：按时间倒序分页 */
+  auditList: (opts: { page?: number; pageSize?: number; action?: string; userId?: number } = {}) => {
+    const q = new URLSearchParams();
+    if (opts.page) q.set('page', String(opts.page));
+    if (opts.pageSize) q.set('pageSize', String(opts.pageSize));
+    if (opts.action) q.set('action', opts.action);
+    if (opts.userId !== undefined && opts.userId !== null) q.set('userId', String(opts.userId));
+    const qs = q.toString();
+    return request<AuditListResult>(`/api/audit${qs ? `?${qs}` : ''}`);
+  },
+
+  auditClear: () => request<{ success: boolean; removed: number }>('/api/audit', { method: 'DELETE' }),
 
   dockerContainers: () => request<DockerListResult>('/api/docker/containers'),
 

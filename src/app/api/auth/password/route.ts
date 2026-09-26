@@ -2,6 +2,7 @@ import { getCurrentUser, signToken, setSessionCookie } from '@/lib/auth';
 import { getAuthUser, updateUser } from '@/lib/db';
 import { fail, handle, ok, readJson } from '@/lib/api';
 import { isWeakPassword } from '@/lib/weakPassword';
+import { audit } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,6 +20,7 @@ export async function POST(req: Request) {
     updateUser(me.id, { password: newPassword, mustChangePassword: stillWeak ? 1 : 0 });
     const fresh = getAuthUser(me.username)!;
     await setSessionCookie(await signToken(fresh));
+    audit(req, { userId: me.id, username: me.username, action: 'auth.password' });
     return ok({ success: true });
   });
 }

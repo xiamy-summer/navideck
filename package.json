@@ -1,6 +1,6 @@
 {
   "name": "navideck",
-  "version": "0.26.0",
+  "version": "0.27.0",
   "private": true,
   "description": "轻量 NAS / 服务器导航面板，内置简易 Docker 管理器",
   "scripts": {

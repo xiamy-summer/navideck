@@ -1,5 +1,6 @@
 import { getGlobalSettings, getUserSettings, saveUserSettings } from '@/lib/db';
 import { fail, handle, ok, readJson, requireWrite, resolveTarget } from '@/lib/api';
+import { audit } from '@/lib/audit';
 import type { Settings } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -32,10 +33,23 @@ export async function PUT(req: Request) {
     if (patch.oidcClientSecret === SECRET_MASK) delete patch.oidcClientSecret;
     const url = new URL(req.url);
     const isGlobal = url.searchParams.get('global') === '1';
+    const changedKeys = Object.keys(patch).join(', ') || undefined;
     if (isGlobal) {
       if (target.actor?.role !== 'admin') return fail('需要管理员权限', 403);
+      audit(req, {
+        userId: target.actor?.id ?? 0,
+        username: target.actor?.username ?? '',
+        action: 'settings.update',
+        detail: `全局：${changedKeys ?? '无'}`,
+      });
       return ok(saveUserSettings(0, patch));
     }
+    audit(req, {
+      userId: target.actor?.id ?? 0,
+      username: target.actor?.username ?? '',
+      action: 'settings.update',
+      detail: changedKeys,
+    });
     return ok(saveUserSettings(target.owner.id, patch));
   });
 }

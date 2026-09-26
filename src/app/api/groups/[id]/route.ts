@@ -1,5 +1,6 @@
 import { deleteGroup, updateGroup } from '@/lib/db';
 import { fail, handle, ok, readJson, requireWrite, resolveTarget } from '@/lib/api';
+import { audit } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +19,12 @@ export async function PATCH(req: Request, ctx: Ctx) {
       sort: body.sort,
     });
     if (!updated) return fail('分组不存在', 404);
+    audit(req, {
+      userId: target.actor?.id ?? 0,
+      username: target.actor?.username ?? '',
+      action: 'group.update',
+      target: updated.name,
+    });
     return ok(updated);
   });
 }
@@ -28,6 +35,12 @@ export async function DELETE(req: Request, ctx: Ctx) {
     const target = await resolveTarget(req);
     requireWrite(target);
     if (!deleteGroup(target.owner.id, Number(id))) return fail('分组不存在', 404);
+    audit(req, {
+      userId: target.actor?.id ?? 0,
+      username: target.actor?.username ?? '',
+      action: 'group.delete',
+      target: `分组 #${id}`,
+    });
     return ok({ success: true });
   });
 }

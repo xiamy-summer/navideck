@@ -1,5 +1,6 @@
 import { createItem } from '@/lib/db';
 import { fail, handle, ok, readJson, requireWrite, resolveTarget } from '@/lib/api';
+import { audit } from '@/lib/audit';
 import type { Item, OpenMode } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -24,6 +25,12 @@ export async function POST(req: Request) {
       service: body.service ?? null,
       container: body.container ?? null,
       cardSize: body.cardSize ?? null,
+    });
+    audit(req, {
+      userId: target.actor?.id ?? 0,
+      username: target.actor?.username ?? '',
+      action: 'item.create',
+      target: title,
     });
     return ok(item, { status: 201 });
   });

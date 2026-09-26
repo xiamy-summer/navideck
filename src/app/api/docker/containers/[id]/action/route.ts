@@ -1,5 +1,6 @@
 import { containerAction } from '@/lib/docker';
 import { fail, handle, ok, readJson, requireAdmin, resolveTarget } from '@/lib/api';
+import { audit } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +19,13 @@ export async function POST(req: Request, ctx: Ctx) {
       return fail('不支持的操作');
     }
     await containerAction(id, action as (typeof ACTIONS)[number]);
+    audit(req, {
+      userId: target.actor?.id ?? 0,
+      username: target.actor?.username ?? '',
+      action: 'docker.action',
+      target: id,
+      detail: action,
+    });
     return ok({ success: true });
   });
 }

@@ -1,5 +1,6 @@
 import { deleteItem, updateItem } from '@/lib/db';
 import { fail, handle, ok, readJson, requireWrite, resolveTarget } from '@/lib/api';
+import { audit } from '@/lib/audit';
 import type { Item, OpenMode } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -30,6 +31,13 @@ export async function PATCH(req: Request, ctx: Ctx) {
     if (body.cardSize !== undefined) patch.cardSize = body.cardSize;
     const updated = updateItem(target.owner.id, Number(id), patch);
     if (!updated) return fail('站点不存在', 404);
+    audit(req, {
+      userId: target.actor?.id ?? 0,
+      username: target.actor?.username ?? '',
+      action: 'item.update',
+      target: updated.title,
+      detail: Object.keys(patch).join(', ') || undefined,
+    });
     return ok(updated);
   });
 }
@@ -40,6 +48,12 @@ export async function DELETE(req: Request, ctx: Ctx) {
     const target = await resolveTarget(req);
     requireWrite(target);
     if (!deleteItem(target.owner.id, Number(id))) return fail('站点不存在', 404);
+    audit(req, {
+      userId: target.actor?.id ?? 0,
+      username: target.actor?.username ?? '',
+      action: 'item.delete',
+      target: `站点 #${id}`,
+    });
     return ok({ success: true });
   });
 }

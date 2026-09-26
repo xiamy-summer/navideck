@@ -1,5 +1,6 @@
 import { createGroup, listGroups, listItems } from '@/lib/db';
 import { fail, handle, ok, readJson, requireWrite, resolveTarget } from '@/lib/api';
+import { audit } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +25,13 @@ export async function POST(req: Request) {
     const body = await readJson<{ name?: string; icon?: string | null }>(req);
     const name = (body.name ?? '').trim();
     if (!name) return fail('分组名称不能为空');
-    return ok(createGroup(target.owner.id, name, body.icon ?? null), { status: 201 });
+    const group = createGroup(target.owner.id, name, body.icon ?? null);
+    audit(req, {
+      userId: target.actor?.id ?? 0,
+      username: target.actor?.username ?? '',
+      action: 'group.create',
+      target: name,
+    });
+    return ok(group, { status: 201 });
   });
 }
